@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Blog Post - Falcon Driving School",
 };
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
+export default async function BlogPostPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   return <BlogPostClient slug={params.slug} />;
 }
