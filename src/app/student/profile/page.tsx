@@ -1,29 +1,69 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sidebar } from "@/components/layout/sidebar";
-import { User, Camera, Save } from "lucide-react";
+import { User, Camera, Save, Loader2 } from "lucide-react";
+import { useUser } from "@/hooks/use-user";
+import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 
 export default function StudentProfile() {
-  const [profile, setProfile] = useState({
-    fullName: "John Doe",
-    email: "john@example.com",
-    phone: "0800 000 0000",
-    address: "123 Main Street, Abuja, Nigeria",
+  const { user, profile, loading: userLoading, refresh } = useUser();
+  const [profileData, setProfileData] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
   });
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        fullName: (profile as any)?.full_name || user?.email?.split("@")[0] || "Student",
+        email: user?.email || "",
+        phone: (profile as any)?.phone || "",
+        address: (profile as any)?.address || "",
+      });
+    }
+  }, [user, profile]);
+
   const handleSave = async () => {
     setSaving(true);
-    // Will integrate with Supabase
-    await new Promise((r) => setTimeout(r, 1000));
-    toast.success("Profile updated successfully!");
-    setSaving(false);
+    try {
+      const studentId = (profile as any)?.id;
+      if (studentId) {
+        const { error: studentError } = await supabase
+          .from("students")
+          .update({
+            phone: profileData.phone,
+            address: profileData.address,
+          })
+          .eq("id", studentId);
+        if (studentError) throw studentError;
+      }
+      toast.success("Profile updated successfully!");
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (userLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="student" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -46,7 +86,7 @@ export default function StudentProfile() {
                   </button>
                 </div>
                 <h2 className="mt-4 text-xl font-semibold text-primary">
-                  {profile.fullName}
+                  {profileData.fullName}
                 </h2>
                 <p className="text-sm text-gray-500">Student</p>
               </div>
@@ -56,33 +96,33 @@ export default function StudentProfile() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Full Name</label>
                     <Input
-                      value={profile.fullName}
+                      value={profileData.fullName}
                       onChange={(e) =>
-                        setProfile({ ...profile, fullName: e.target.value })
+                        setProfileData({ ...profileData, fullName: e.target.value })
                       }
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Email</label>
-                    <Input value={profile.email} disabled />
+                    <Input value={profileData.email} disabled />
                   </div>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Phone</label>
                     <Input
-                      value={profile.phone}
+                      value={profileData.phone}
                       onChange={(e) =>
-                        setProfile({ ...profile, phone: e.target.value })
+                        setProfileData({ ...profileData, phone: e.target.value })
                       }
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Address</label>
                     <Input
-                      value={profile.address}
+                      value={profileData.address}
                       onChange={(e) =>
-                        setProfile({ ...profile, address: e.target.value })
+                        setProfileData({ ...profileData, address: e.target.value })
                       }
                     />
                   </div>

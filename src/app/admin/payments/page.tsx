@@ -1,23 +1,66 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sidebar } from "@/components/layout/sidebar";
-import { CreditCard, Download, Search, CheckCircle, XCircle, RotateCcw } from "lucide-react";
+import { CreditCard, Download, Search, CheckCircle, XCircle, RotateCcw, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-
-const transactions = [
-  { id: "TXN-1234567890", student: "John Doe", amount: 150000, method: "OPay", status: "completed" as const, date: "2025-12-19", reference: "PAY-001" },
-  { id: "TXN-0987654321", student: "Sarah Smith", amount: 180000, method: "Card", status: "completed" as const, date: "2025-12-18", reference: "PAY-002" },
-  { id: "TXN-1122334455", student: "Mike Johnson", amount: 120000, method: "Bank Transfer", status: "pending" as const, date: "2025-12-17", reference: "PAY-003" },
-  { id: "TXN-5544332211", student: "Jane Ade", amount: 90000, method: "OPay", status: "refunded" as const, date: "2025-12-16", reference: "PAY-004" },
-];
+import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 export default function AdminPayments() {
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("payments")
+        .select("*, students!inner(name, email)")
+        .order("created_at", { ascending: false });
+      setTransactions(data ?? []);
+      setLoading(false);
+    };
+    fetch();
+  }, []);
+
   const totalRevenue = transactions
-    .filter((t) => t.status === "completed")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((t: any) => t.status === "completed")
+    .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+
+  const handleApprove = async (id: string) => {
+    try {
+      await supabase.from("payments").update({ status: "completed" }).eq("id", id);
+      setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, status: "completed" } : t)));
+      toast.success("Payment approved");
+    } catch {
+      toast.error("Failed to approve payment");
+    }
+  };
+
+  const handleRefund = async (id: string) => {
+    if (!confirm("Refund this payment?")) return;
+    try {
+      await supabase.from("payments").update({ status: "refunded" }).eq("id", id);
+      setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, status: "refunded" } : t)));
+      toast.success("Payment refunded");
+    } catch {
+      toast.error("Failed to refund payment");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="admin" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -42,13 +85,13 @@ export default function AdminPayments() {
             <Card>
               <CardContent className="p-6 text-center">
                 <p className="text-sm text-gray-500">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{transactions.filter(t => t.status === "pending").length}</p>
+                <p className="text-2xl font-bold text-yellow-600">{transactions.filter((t: any) => t.status === "pending").length}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6 text-center">
                 <p className="text-sm text-gray-500">Refunded</p>
-                <p className="text-2xl font-bold text-red-600">{transactions.filter(t => t.status === "refunded").length}</p>
+                <p className="text-2xl font-bold text-red-600">{transactions.filter((t: any) => t.status === "refunded").length}</p>
               </CardContent>
             </Card>
           </div>
@@ -71,34 +114,40 @@ export default function AdminPayments() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((tx) => (
-                    <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 text-xs font-mono text-gray-600">{tx.id}</td>
-                      <td className="py-3 px-4 font-medium text-primary">{tx.student}</td>
-                      <td className="py-3 px-4 font-bold">{formatCurrency(tx.amount)}</td>
-                      <td className="py-3 px-4 text-gray-600">{tx.method}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={tx.status === "completed" ? "success" : tx.status === "pending" ? "warning" : "destructive"}>
-                          {tx.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">{tx.date}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex gap-1">
-                          {tx.status === "pending" && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            </Button>
-                          )}
-                          {tx.status === "completed" && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <RotateCcw className="h-4 w-4 text-red-500" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
+                  {transactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-400">No transactions found</td>
                     </tr>
-                  ))}
+                  ) : (
+                    transactions.map((tx: any) => (
+                      <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4 text-xs font-mono text-gray-600">{tx.id.slice(0, 16)}...</td>
+                        <td className="py-3 px-4 font-medium text-primary">{tx.students?.name ?? "Unknown"}</td>
+                        <td className="py-3 px-4 font-bold">{formatCurrency(tx.amount)}</td>
+                        <td className="py-3 px-4 text-gray-600">{tx.method}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={tx.status === "completed" ? "success" : tx.status === "pending" ? "warning" : "destructive"}>
+                            {tx.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-gray-600">{tx.created_at?.split("T")[0]}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-1">
+                            {tx.status === "pending" && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleApprove(tx.id)}>
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              </Button>
+                            )}
+                            {tx.status === "completed" && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRefund(tx.id)}>
+                                <RotateCcw className="h-4 w-4 text-red-500" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </CardContent>

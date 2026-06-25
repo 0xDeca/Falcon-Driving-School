@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,18 +8,119 @@ import { Input } from "@/components/ui/input";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Calendar, Clock, MapPin, Play, CheckCircle, XCircle } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/use-user";
+import toast from "react-hot-toast";
 
 export default function InstructorLessons() {
+  const { user, profile, loading: userLoading } = useUser();
   const [date, setDate] = useState("");
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const lessons = [
-    { id: 1, date: "2025-12-20", time: "09:00", student: "John Doe", topic: "Highway Driving", duration: 90, status: "scheduled" as const },
-    { id: 2, date: "2025-12-20", time: "11:00", student: "Sarah Smith", topic: "Parking Practice", duration: 90, status: "scheduled" as const },
-    { id: 3, date: "2025-12-20", time: "14:00", student: "Mike Johnson", topic: "Reverse Parking", duration: 90, status: "scheduled" as const },
-    { id: 4, date: "2025-12-18", time: "10:00", student: "Jane Ade", topic: "Steering Control", duration: 90, status: "completed" as const },
-  ];
+  const fetchLessons = async () => {
+    if (!profile) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const instructorId = (profile as any).id;
 
-  const filtered = lessons.filter((l) => !date || l.date === date);
+      const { data, error: lessonsError } = await supabase
+        .from("lessons")
+        .select("*, enrollments!inner(*, students!inner(*, users(*)), courses(*))")
+        .eq("instructor_id", instructorId)
+        .order("scheduled_date", { ascending: false });
+
+      if (lessonsError) throw lessonsError;
+
+      setLessons(
+        (data || []).map((l: any) => ({
+          id: l.id,
+          date: l.scheduled_date,
+          time: new Date(l.scheduled_date).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" }),
+          student: l.enrollments?.students?.users?.name ?? l.enrollments?.students?.users?.email ?? "Unknown",
+          topic: l.enrollments?.courses?.name ?? "Driving Lesson",
+          duration: l.duration_minutes,
+          status: l.attendance_status,
+        }))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user || !profile) { setLoading(false); return; }
+    fetchLessons();
+  }, [user, profile, userLoading]);
+
+  const handleStartLesson = async (lessonId: string) => {
+    try {
+      const { error } = await supabase
+        .from("lessons")
+        .update({ start_time: new Date().toISOString(), attendance_status: "present" })
+        .eq("id", lessonId);
+      if (error) throw error;
+      toast.success("Lesson started!");
+      fetchLessons();
+    } catch (err) {
+      toast.error("Failed to start lesson");
+    }
+  };
+
+  const handleMarkPresent = async (lessonId: string) => {
+    try {
+      const { error } = await supabase
+        .from("lessons")
+        .update({ attendance_status: "present" })
+        .eq("id", lessonId);
+      if (error) throw error;
+      toast.success("Marked as present");
+      fetchLessons();
+    } catch (err) {
+      toast.error("Failed to update attendance");
+    }
+  };
+
+  const handleMarkAbsent = async (lessonId: string) => {
+    try {
+      const { error } = await supabase
+        .from("lessons")
+        .update({ attendance_status: "absent" })
+        .eq("id", lessonId);
+      if (error) throw error;
+      toast.success("Marked as absent");
+      fetchLessons();
+    } catch (err) {
+      toast.error("Failed to update attendance");
+    }
+  };
+
+  const filtered = lessons.filter((l) => !date || l.date?.startsWith(date));
+
+  if (loading || userLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="instructor" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="instructor" />
+        <div className="flex-1 flex items-center justify-center text-red-500">Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -38,6 +139,9 @@ export default function InstructorLessons() {
           </div>
 
           <div className="space-y-4">
+            {filtered.length === 0 && (
+              <p className="text-center text-gray-500 py-8">No lessons found</p>
+            )}
             {filtered.map((lesson) => (
               <Card key={lesson.id}>
                 <CardContent className="p-6">
@@ -62,18 +166,20 @@ export default function InstructorLessons() {
                     <div className="flex items-center gap-2">
                       {lesson.status === "scheduled" ? (
                         <>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => handleMarkPresent(lesson.id)}>
                             <CheckCircle className="mr-1 h-4 w-4" /> Mark Present
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => handleMarkAbsent(lesson.id)}>
                             <XCircle className="mr-1 h-4 w-4" /> Mark Absent
                           </Button>
-                          <Button variant="gold" size="sm">
+                          <Button variant="gold" size="sm" onClick={() => handleStartLesson(lesson.id)}>
                             <Play className="mr-1 h-4 w-4" /> Start Lesson
                           </Button>
                         </>
-                      ) : (
+                      ) : lesson.status === "present" ? (
                         <Badge variant="success">Completed</Badge>
+                      ) : (
+                        <Badge variant="destructive">Absent</Badge>
                       )}
                     </div>
                   </div>

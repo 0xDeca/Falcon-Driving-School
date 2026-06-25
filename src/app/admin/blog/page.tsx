@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,32 +8,64 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Sidebar } from "@/components/layout/sidebar";
-import { FileText, Plus, Edit, Eye, Calendar, Clock, Search } from "lucide-react";
+import { FileText, Plus, Edit, Eye, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-
-const posts = [
-  { id: 1, title: "10 Essential Tips for New Drivers in Nigeria", category: "Driving Tips", status: "published" as const, publishedAt: "2025-12-15", author: "Admin" },
-  { id: 2, title: "Understanding Nigerian Road Signs", category: "Road Safety", status: "published" as const, publishedAt: "2025-12-10", author: "Admin" },
-  { id: 3, title: "How to Get Your Driver's License", category: "Driver Licensing", status: "draft" as const, publishedAt: null, author: "Admin" },
-];
+import { supabase } from "@/lib/supabase";
 
 export default function AdminBlog() {
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
   const [postData, setPostData] = useState({
     title: "",
     slug: "",
     content: "",
     excerpt: "",
-    category: "Driving Tips",
-    seoTitle: "",
-    seoDescription: "",
-    seoKeywords: "",
+    category_id: "",
+    seo_title: "",
+    seo_description: "",
+    seo_keywords: "",
   });
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const [postsRes, catsRes] = await Promise.all([
+        supabase.from("blog_posts").select("*, blog_categories(name)").order("created_at", { ascending: false }),
+        supabase.from("blog_categories").select("*"),
+      ]);
+      setPosts(postsRes.data ?? []);
+      setCategories(catsRes.data ?? []);
+      setLoading(false);
+    };
+    fetch();
+  }, []);
 
   const handleSave = async (status: "draft" | "published") => {
-    toast.success(`Post ${status === "published" ? "published" : "saved as draft"} successfully!`);
-    setShowEditor(false);
+    try {
+      const res = await fetch("/api/blog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...postData, status }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      toast.success(`Post ${status === "published" ? "published" : "saved as draft"} successfully!`);
+      setShowEditor(false);
+    } catch {
+      toast.error("Failed to save post");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="admin" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -98,11 +130,12 @@ export default function AdminBlog() {
                       <Label>Category</Label>
                       <select
                         className="flex h-9 w-full rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm"
-                        value={postData.category}
-                        onChange={(e) => setPostData({ ...postData, category: e.target.value })}
+                        value={postData.category_id}
+                        onChange={(e) => setPostData({ ...postData, category_id: e.target.value })}
                       >
-                        {["Driving Tips", "Road Safety", "Driver Licensing", "Traffic Rules", "Student Success Stories", "Falcon Updates"].map((cat) => (
-                          <option key={cat} value={cat}>{cat}</option>
+                        <option value="">Select category</option>
+                        {categories.map((cat: any) => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
                         ))}
                       </select>
                     </div>
@@ -119,24 +152,24 @@ export default function AdminBlog() {
                         <Label>SEO Title</Label>
                         <Input
                           placeholder="Meta title"
-                          value={postData.seoTitle}
-                          onChange={(e) => setPostData({ ...postData, seoTitle: e.target.value })}
+                          value={postData.seo_title}
+                          onChange={(e) => setPostData({ ...postData, seo_title: e.target.value })}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>SEO Description</Label>
                         <Input
                           placeholder="Meta description"
-                          value={postData.seoDescription}
-                          onChange={(e) => setPostData({ ...postData, seoDescription: e.target.value })}
+                          value={postData.seo_description}
+                          onChange={(e) => setPostData({ ...postData, seo_description: e.target.value })}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>SEO Keywords</Label>
                         <Input
                           placeholder="keyword1, keyword2"
-                          value={postData.seoKeywords}
-                          onChange={(e) => setPostData({ ...postData, seoKeywords: e.target.value })}
+                          value={postData.seo_keywords}
+                          onChange={(e) => setPostData({ ...postData, seo_keywords: e.target.value })}
                         />
                       </div>
                     </div>
@@ -171,26 +204,32 @@ export default function AdminBlog() {
                   </tr>
                 </thead>
                 <tbody>
-                  {posts.map((post) => (
-                    <tr key={post.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-primary">{post.title}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant="secondary" className="text-xs">{post.category}</Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge variant={post.status === "published" ? "success" : "warning"}>
-                          {post.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">{post.publishedAt || "-"}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                        </div>
-                      </td>
+                  {posts.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-gray-400">No posts found</td>
                     </tr>
-                  ))}
+                  ) : (
+                    posts.map((post: any) => (
+                      <tr key={post.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4 font-medium text-primary">{post.title}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant="secondary" className="text-xs">{post.blog_categories?.name ?? "Uncategorized"}</Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant={post.status === "published" ? "success" : "warning"}>
+                            {post.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-gray-600">{post.published_at?.split("T")[0] ?? "-"}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </CardContent>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,25 +15,146 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { formatDate, formatTime } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/use-user";
 
 export default function InstructorDashboard() {
-  const stats = {
-    assignedStudents: 12,
-    todayLessons: 3,
-    upcomingLessons: 8,
-    pendingEvaluations: 2,
-  };
+  const { user, profile, loading: userLoading } = useUser();
 
-  const todayLessons = [
-    { id: 1, time: "09:00", student: "John Doe", topic: "Highway Driving", status: "scheduled" as const },
-    { id: 2, time: "11:00", student: "Sarah Smith", topic: "Parking Practice", status: "scheduled" as const },
-    { id: 3, time: "14:00", student: "Mike Johnson", topic: "Reverse Parking", status: "scheduled" as const },
-  ];
+  const [stats, setStats] = useState({
+    assignedStudents: 0,
+    todayLessons: 0,
+    upcomingLessons: 0,
+    pendingEvaluations: 0,
+  });
+  const [todayLessons, setTodayLessons] = useState<any[]>([]);
+  const [pendingEvals, setPendingEvals] = useState<any[]>([]);
+  const [myStudents, setMyStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const pendingEvals = [
-    { id: 1, student: "Jane Ade", date: "2025-12-18", topic: "Steering Control" },
-    { id: 2, student: "Paul Eze", date: "2025-12-17", topic: "Road Awareness" },
-  ];
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user || !profile) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchDashboard = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const instructorId = (profile as any).id;
+
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayEnd = new Date(todayStart.getTime() + 86400000 - 1);
+        const weekEnd = new Date(todayStart.getTime() + 7 * 86400000 - 1);
+
+        // Fetch all lessons for this instructor with student data
+        const { data: allLessons, error: lessonsError } = await supabase
+          .from("lessons")
+          .select("*, enrollments!inner(*, students!inner(*, users(*)), courses(*))")
+          .eq("instructor_id", instructorId);
+
+        if (lessonsError) throw lessonsError;
+
+        const lessons = allLessons || [];
+
+        // Count distinct students
+        const studentMap = new Map();
+        lessons.forEach((l: any) => {
+          const sid = l.enrollments?.student_id;
+          if (sid && !studentMap.has(sid)) {
+            studentMap.set(sid, {
+              id: sid,
+              name: l.enrollments?.students?.users?.name ?? l.enrollments?.students?.users?.email ?? "Unknown",
+              course: l.enrollments?.courses?.name ?? "Unknown",
+              email: l.enrollments?.students?.users?.email ?? "",
+            });
+          }
+        });
+
+        // Today's lessons
+        const today = lessons.filter((l: any) => {
+          const d = new Date(l.scheduled_date);
+          return d >= todayStart && d <= todayEnd;
+        });
+
+        // Upcoming lessons (next 7 days after today)
+        const upcoming = lessons.filter((l: any) => {
+          const d = new Date(l.scheduled_date);
+          return d > todayEnd && d <= weekEnd;
+        });
+
+        // Get evaluations to find pending ones
+        const lessonIds = lessons.map((l: any) => l.id);
+        const { data: evals } = await supabase
+          .from("lesson_evaluations")
+          .select("lesson_id")
+          .in("lesson_id", lessonIds);
+
+        const evaluatedIds = new Set((evals || []).map((e: any) => e.lesson_id));
+        const pending = lessons.filter(
+          (l: any) => !evaluatedIds.has(l.id) && new Date(l.scheduled_date) <= now
+        );
+
+        setStats({
+          assignedStudents: studentMap.size,
+          todayLessons: today.length,
+          upcomingLessons: upcoming.length,
+          pendingEvaluations: pending.length,
+        });
+
+        setTodayLessons(
+          today.map((l: any) => ({
+            id: l.id,
+            time: new Date(l.scheduled_date).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" }),
+            student: l.enrollments?.students?.users?.name ?? l.enrollments?.students?.users?.email ?? "Student",
+            topic: l.enrollments?.courses?.name ?? "Driving Lesson",
+            status: l.attendance_status,
+          }))
+        );
+
+        setPendingEvals(
+          pending.slice(0, 5).map((l: any) => ({
+            id: l.id,
+            student: l.enrollments?.students?.users?.name ?? l.enrollments?.students?.users?.email ?? "Student",
+            date: l.scheduled_date,
+            topic: l.enrollments?.courses?.name ?? "Driving Lesson",
+          }))
+        );
+
+        setMyStudents(Array.from(studentMap.values()));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboard();
+  }, [user, profile, userLoading]);
+
+  if (loading || userLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="instructor" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="instructor" />
+        <div className="flex-1 flex items-center justify-center text-red-500">Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -112,11 +234,16 @@ export default function InstructorDashboard() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm">Start</Button>
+                        <Link href={`/instructor/lessons`}>
+                          <Button variant="outline" size="sm">Start</Button>
+                        </Link>
                         <Badge variant="warning">Scheduled</Badge>
                       </div>
                     </div>
                   ))}
+                  {todayLessons.length === 0 && (
+                    <p className="text-center text-gray-500 py-4">No lessons scheduled for today</p>
+                  )}
                 </div>
                 <Link href="/instructor/lessons">
                   <Button variant="outline" className="w-full mt-4">View All Lessons</Button>
@@ -147,10 +274,10 @@ export default function InstructorDashboard() {
                       </Link>
                     </div>
                   ))}
+                  {pendingEvals.length === 0 && (
+                    <p className="text-center text-gray-500 py-8">No pending evaluations</p>
+                  )}
                 </div>
-                {pendingEvals.length === 0 && (
-                  <p className="text-center text-gray-500 py-8">No pending evaluations</p>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -175,10 +302,10 @@ export default function InstructorDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {["John Doe", "Sarah Smith", "Mike Johnson", "Jane Ade"].map((student, i) => (
-                      <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium text-primary">{student}</td>
-                        <td className="py-3 px-4 text-gray-600">Automatic Driving</td>
+                    {myStudents.map((student, i) => (
+                      <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4 font-medium text-primary">{student.name}</td>
+                        <td className="py-3 px-4 text-gray-600">{student.course}</td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <div className="w-24 h-2 bg-gray-200 rounded-full">

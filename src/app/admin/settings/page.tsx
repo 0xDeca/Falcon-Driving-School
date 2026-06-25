@@ -1,28 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Settings, Save, Bell, Shield, DollarSign } from "lucide-react";
+import { Settings, Save, Bell, Shield, DollarSign, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
+
+const DEFAULT_SETTINGS = {
+  school_name: "Falcon Driving School",
+  email: "info@falcondrivingschool.com",
+  phone: "0800 000 0000",
+  address: "123 Ibrahim Babangida Way, Abuja, Nigeria",
+  currency: "NGN",
+  lesson_reminder_hours: "24",
+  cancellation_notice: "24",
+};
 
 export default function AdminSettings() {
-  const [settings, setSettings] = useState({
-    schoolName: "Falcon Driving School",
-    email: "info@falcondrivingschool.com",
-    phone: "0800 000 0000",
-    address: "123 Ibrahim Babangida Way, Abuja, Nigeria",
-    currency: "NGN",
-    lessonReminderHours: "24",
-    cancellationNotice: "24",
-  });
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    toast.success("Settings saved successfully!");
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("settings")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (data) {
+        setSettings((prev) => ({ ...prev, ...data }));
+      }
+      setLoading(false);
+    };
+    fetch();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("settings")
+        .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      toast.success("Settings saved successfully!");
+    } catch {
+      toast.error("Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="admin" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -42,7 +85,7 @@ export default function AdminSettings() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>School Name</Label>
-                  <Input value={settings.schoolName} onChange={(e) => setSettings({ ...settings, schoolName: e.target.value })} />
+                  <Input value={settings.school_name} onChange={(e) => setSettings({ ...settings, school_name: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Email Address</Label>
@@ -80,18 +123,18 @@ export default function AdminSettings() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Lesson Reminder (hours before)</Label>
-                  <Input type="number" value={settings.lessonReminderHours} onChange={(e) => setSettings({ ...settings, lessonReminderHours: e.target.value })} />
+                  <Input type="number" value={settings.lesson_reminder_hours} onChange={(e) => setSettings({ ...settings, lesson_reminder_hours: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Cancellation Notice (hours)</Label>
-                  <Input type="number" value={settings.cancellationNotice} onChange={(e) => setSettings({ ...settings, cancellationNotice: e.target.value })} />
+                  <Input type="number" value={settings.cancellation_notice} onChange={(e) => setSettings({ ...settings, cancellation_notice: e.target.value })} />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Button variant="gold" size="lg" className="w-full" onClick={handleSave}>
-            <Save className="mr-2 h-4 w-4" /> Save All Settings
+          <Button variant="gold" size="lg" className="w-full" onClick={handleSave} disabled={saving}>
+            <Save className="mr-2 h-4 w-4" /> {saving ? "Saving..." : "Save All Settings"}
           </Button>
         </div>
       </div>

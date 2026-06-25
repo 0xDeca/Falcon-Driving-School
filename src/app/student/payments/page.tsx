@@ -5,40 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sidebar } from "@/components/layout/sidebar";
-import { CreditCard, Download, CheckCircle, XCircle, Clock } from "lucide-react";
+import { CreditCard, Download, CheckCircle, XCircle, Clock, Loader2, AlertCircle } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
-
-const paymentHistory = [
-  {
-    id: "PAY-001",
-    transactionId: "TXN-1234567890",
-    amount: 150000,
-    currency: "NGN",
-    method: "OPay Transfer",
-    status: "completed" as const,
-    date: "2025-12-01",
-  },
-  {
-    id: "PAY-002",
-    transactionId: "TXN-0987654321",
-    amount: 30000,
-    currency: "NGN",
-    method: "Bank Transfer",
-    status: "completed" as const,
-    date: "2025-11-15",
-  },
-  {
-    id: "PAY-003",
-    transactionId: "TXN-1122334455",
-    amount: 50000,
-    currency: "NGN",
-    method: "Debit Card",
-    status: "pending" as const,
-    date: "2025-12-19",
-  },
-];
+import { useStudentPayments } from "@/hooks/use-payments";
 
 export default function StudentPayments() {
+  const { payments, loading, totalPaid, outstanding } = useStudentPayments();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="student" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar role="student" />
@@ -53,7 +37,7 @@ export default function StudentPayments() {
               <CardContent className="p-6 text-center">
                 <p className="text-sm text-gray-500 mb-1">Total Paid</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(180000)}
+                  {formatCurrency(totalPaid)}
                 </p>
               </CardContent>
             </Card>
@@ -61,14 +45,16 @@ export default function StudentPayments() {
               <CardContent className="p-6 text-center">
                 <p className="text-sm text-gray-500 mb-1">Outstanding</p>
                 <p className="text-2xl font-bold text-accent">
-                  {formatCurrency(50000)}
+                  {formatCurrency(outstanding)}
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6 text-center">
                 <p className="text-sm text-gray-500 mb-1">Payment Status</p>
-                <Badge variant="success" className="text-sm">Good Standing</Badge>
+                <Badge variant={outstanding > 0 ? "warning" : "success"} className="text-sm">
+                  {outstanding > 0 ? "Outstanding" : "Good Standing"}
+                </Badge>
               </CardContent>
             </Card>
           </div>
@@ -100,6 +86,9 @@ export default function StudentPayments() {
                   <Button variant="gold" className="w-full">
                     Pay with Card
                   </Button>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Note: Real payment integration requires API keys.
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -110,63 +99,69 @@ export default function StudentPayments() {
               <CardTitle className="text-lg">Payment History</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {paymentHistory.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-gray-50"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                          payment.status === "completed"
-                            ? "bg-green-100"
-                            : payment.status === "pending"
-                            ? "bg-yellow-100"
-                            : "bg-red-100"
-                        }`}
-                      >
-                        {payment.status === "completed" ? (
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                        ) : payment.status === "pending" ? (
-                          <Clock className="h-5 w-5 text-yellow-600" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-600" />
+              {payments.length > 0 ? (
+                <div className="space-y-4">
+                  {payments.map((payment: any) => (
+                    <div
+                      key={payment.id}
+                      className="flex items-center justify-between p-4 rounded-lg bg-gray-50"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                            payment.status === "completed"
+                              ? "bg-green-100"
+                              : payment.status === "pending"
+                              ? "bg-yellow-100"
+                              : "bg-red-100"
+                          }`}
+                        >
+                          {payment.status === "completed" ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : payment.status === "pending" ? (
+                            <Clock className="h-5 w-5 text-yellow-600" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-primary">
+                            {formatCurrency(Number(payment.amount))}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {payment.payment_method} - {payment.transaction_id}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {formatDate(payment.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant={
+                            payment.status === "completed"
+                              ? "success"
+                              : payment.status === "pending"
+                              ? "warning"
+                              : "destructive"
+                          }
+                        >
+                          {payment.status}
+                        </Badge>
+                        {payment.status === "completed" && (
+                          <Button variant="outline" size="sm">
+                            <Download className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
-                      <div>
-                        <p className="font-medium text-primary">
-                          {formatCurrency(payment.amount)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {payment.method} - {payment.transactionId}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {formatDate(payment.date)}
-                        </p>
-                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant={
-                          payment.status === "completed"
-                            ? "success"
-                            : payment.status === "pending"
-                            ? "warning"
-                            : "destructive"
-                        }
-                      >
-                        {payment.status}
-                      </Badge>
-                      {payment.status === "completed" && (
-                        <Button variant="outline" size="sm">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No payment history found.
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

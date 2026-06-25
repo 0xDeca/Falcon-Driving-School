@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sidebar } from "@/components/layout/sidebar";
 import { FileText, Star, CheckCircle, AlertCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/use-user";
 import toast from "react-hot-toast";
 
 const skillsList = [
@@ -22,6 +24,7 @@ const skillsList = [
 ];
 
 export default function InstructorEvaluations() {
+  const { user, profile, loading: userLoading } = useUser();
   const [selectedStudent, setSelectedStudent] = useState("");
   const [scores, setScores] = useState<Record<string, number>>({});
   const [skills, setSkills] = useState<string[]>([]);
@@ -29,8 +32,48 @@ export default function InstructorEvaluations() {
   const [improvements, setImprovements] = useState("");
   const [comments, setComments] = useState("");
   const [recommendation, setRecommendation] = useState<"pass" | "needs_improvement" | "">("");
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const students = ["John Doe", "Sarah Smith", "Mike Johnson", "Jane Ade"];
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user || !profile) { setLoading(false); return; }
+
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        const instructorId = (profile as any).id;
+
+        const { data: lessons, error } = await supabase
+          .from("lessons")
+          .select("enrollments!inner(student_id, students!inner(*, users(*)))")
+          .eq("instructor_id", instructorId);
+
+        if (error) throw error;
+
+        const studentMap = new Map();
+        (lessons || []).forEach((l: any) => {
+          const sid = l.enrollments?.student_id;
+          const studentData = l.enrollments?.students;
+          if (sid && !studentMap.has(sid)) {
+            studentMap.set(sid, {
+              id: sid,
+              name: studentData?.users?.name ?? studentData?.users?.email ?? "Unknown",
+            });
+          }
+        });
+
+        setStudents(Array.from(studentMap.values()));
+      } catch (err) {
+        toast.error("Failed to load students");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, [user, profile, userLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,18 +81,75 @@ export default function InstructorEvaluations() {
       toast.error("Please complete all required fields");
       return;
     }
-    toast.success("Evaluation submitted successfully!");
-    // Reset form
-    setSelectedStudent("");
-    setScores({});
-    setSkills([]);
-    setStrengths("");
-    setImprovements("");
-    setComments("");
-    setRecommendation("");
+
+    try {
+      setSubmitting(true);
+      const instructorId = (profile as any).id;
+
+      // Find the latest lesson for this student with this instructor
+      const { data: lessonData } = await supabase
+        .from("lessons")
+        .select("id")
+        .eq("instructor_id", instructorId)
+        .eq("enrollments.student_id", selectedStudent)
+        .order("scheduled_date", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!lessonData) {
+        toast.error("No lesson found for this student");
+        return;
+      }
+
+      const response = await fetch("/api/evaluations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lesson_id: lessonData.id,
+          student_id: selectedStudent,
+          instructor_id: instructorId,
+          steering_score: scores["Steering Control"] || 0,
+          parking_score: scores["Parking"] || 0,
+          reverse_parking_score: scores["Reverse Parking"] || 0,
+          road_awareness_score: scores["Road Awareness"] || 0,
+          confidence_score: scores["Confidence"] || 0,
+          strengths_text: strengths,
+          improvements_text: improvements,
+          comments_text: comments,
+          skills_covered: skills,
+          recommendation,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to submit evaluation");
+
+      toast.success("Evaluation submitted successfully!");
+      setSelectedStudent("");
+      setScores({});
+      setSkills([]);
+      setStrengths("");
+      setImprovements("");
+      setComments("");
+      setRecommendation("");
+    } catch (err) {
+      toast.error("Failed to submit evaluation");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const scoreOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+  if (loading || userLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="instructor" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -79,8 +179,8 @@ export default function InstructorEvaluations() {
                       required
                     >
                       <option value="">Select student</option>
-                      {students.map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                      {students.map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
                   </div>
@@ -238,8 +338,8 @@ export default function InstructorEvaluations() {
               </CardContent>
             </Card>
 
-            <Button type="submit" variant="gold" size="lg" className="w-full">
-              Submit Evaluation
+            <Button type="submit" variant="gold" size="lg" className="w-full" disabled={submitting}>
+              {submitting ? "Submitting..." : "Submit Evaluation"}
             </Button>
           </form>
         </div>

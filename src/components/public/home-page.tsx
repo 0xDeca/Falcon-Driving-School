@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { COURSES_DATA, TESTIMONIALS_DATA, FAQ_DATA } from "@/types";
 import { formatCurrency, truncateText } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 function HeroSection() {
   return (
@@ -263,11 +264,25 @@ function ContactSection() {
     message: "",
   });
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Will integrate with Supabase
-    alert("Thank you for your message! We will get back to you shortly.");
-    setFormData({ name: "", email: "", phone: "", message: "" });
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (!res.ok) throw new Error("Failed to send");
+      toast.success("Message sent! We'll get back to you shortly.");
+      setFormData({ name: "", email: "", phone: "", message: "" });
+    } catch {
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

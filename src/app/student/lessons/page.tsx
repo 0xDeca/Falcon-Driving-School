@@ -15,60 +15,99 @@ import {
   X,
   CheckCircle,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { formatDate, formatTime } from "@/lib/utils";
+import { useStudentLessons } from "@/hooks/use-student-data";
+import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 export default function StudentLessons() {
+  const { lessons, loading, error } = useStudentLessons();
   const [view, setView] = useState<"upcoming" | "history">("upcoming");
   const [selectedDate, setSelectedDate] = useState("");
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  const [newDate, setNewDate] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const lessons = [
-    {
-      id: 1,
-      date: "2025-12-20",
-      time: "09:00",
-      duration: 90,
-      instructor: "Adebayo Ogunlesi",
-      topic: "Highway Driving",
-      status: "scheduled" as const,
-    },
-    {
-      id: 2,
-      date: "2025-12-22",
-      time: "14:00",
-      duration: 90,
-      instructor: "Adebayo Ogunlesi",
-      topic: "Reverse Parking",
-      status: "scheduled" as const,
-    },
-    {
-      id: 3,
-      date: "2025-12-18",
-      time: "10:00",
-      duration: 90,
-      instructor: "Adebayo Ogunlesi",
-      topic: "Steering Control",
-      status: "completed" as const,
-    },
-    {
-      id: 4,
-      date: "2025-12-16",
-      time: "11:00",
-      duration: 90,
-      instructor: "Adebayo Ogunlesi",
-      topic: "Parking Practice",
-      status: "completed" as const,
-    },
-  ];
+  const lessonsWithTime = lessons.map((l: any) => ({
+    ...l,
+    time: formatTime(l.date),
+  }));
 
-  const filtered = lessons.filter((l) => {
-    const matchesDate = !selectedDate || l.date === selectedDate;
+  const filtered = lessonsWithTime.filter((l: any) => {
+    const lessonDate = l.date?.split("T")[0];
+    const matchesDate = !selectedDate || lessonDate === selectedDate;
     const matchesView =
       view === "upcoming"
         ? l.status === "scheduled"
         : l.status !== "scheduled";
     return matchesDate && matchesView;
   });
+
+  const handleReschedule = async (lessonId: string) => {
+    if (!newDate) {
+      toast.error("Please select a new date");
+      return;
+    }
+    setActionLoading(lessonId);
+    try {
+      const { error } = await supabase
+        .from("lessons")
+        .update({ scheduled_date: newDate })
+        .eq("id", lessonId);
+      if (error) throw error;
+      toast.success("Lesson rescheduled successfully");
+      setReschedulingId(null);
+      setNewDate("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reschedule");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCancel = async (lessonId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this lesson?")) return;
+    setActionLoading(lessonId);
+    try {
+      const { error } = await supabase
+        .from("lessons")
+        .update({ attendance_status: "cancelled" })
+        .eq("id", lessonId);
+      if (error) throw error;
+      toast.success("Lesson cancelled");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to cancel");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="student" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="student" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+            <p className="text-red-500">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -113,7 +152,7 @@ export default function StudentLessons() {
           </div>
 
           <div className="space-y-4">
-            {filtered.map((lesson) => (
+            {filtered.map((lesson: any) => (
               <Card key={lesson.id}>
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -145,17 +184,62 @@ export default function StudentLessons() {
                       {lesson.status === "scheduled" ? (
                         <>
                           <Badge variant="warning">Scheduled</Badge>
-                          <Button variant="outline" size="sm">
-                            Reschedule
-                          </Button>
-                          <Button variant="destructive" size="sm">
-                            Cancel
-                          </Button>
+                          {reschedulingId === lesson.id ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="datetime-local"
+                                className="w-48"
+                                value={newDate}
+                                onChange={(e) => setNewDate(e.target.value)}
+                              />
+                              <Button
+                                variant="gold"
+                                size="sm"
+                                onClick={() => handleReschedule(lesson.id)}
+                                disabled={actionLoading === lesson.id}
+                              >
+                                {actionLoading === lesson.id ? "..." : "Confirm"}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setReschedulingId(null);
+                                  setNewDate("");
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setReschedulingId(lesson.id)}
+                                disabled={actionLoading === lesson.id}
+                              >
+                                Reschedule
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleCancel(lesson.id)}
+                                disabled={actionLoading === lesson.id}
+                              >
+                                {actionLoading === lesson.id ? "..." : "Cancel"}
+                              </Button>
+                            </>
+                          )}
                         </>
-                      ) : (
+                      ) : lesson.status === "present" ? (
                         <Badge variant="success">
                           <CheckCircle className="mr-1 h-3 w-3" /> Completed
                         </Badge>
+                      ) : lesson.status === "cancelled" ? (
+                        <Badge variant="destructive">Cancelled</Badge>
+                      ) : (
+                        <Badge variant="secondary">Absent</Badge>
                       )}
                     </div>
                   </div>

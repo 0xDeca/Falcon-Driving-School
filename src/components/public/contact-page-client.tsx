@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Phone, Mail, MapPin, Clock, Send } from "lucide-react";
+import toast from "react-hot-toast";
 
 export function ContactPageClient() {
   const [formData, setFormData] = useState({
@@ -14,13 +15,27 @@ export function ContactPageClient() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Will integrate with Supabase
-    setSubmitted(true);
-    setFormData({ name: "", email: "", phone: "", message: "" });
-    setTimeout(() => setSubmitted(false), 5000);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (!res.ok) throw new Error("Failed to send");
+      setSubmitted(true);
+      setFormData({ name: "", email: "", phone: "", message: "" });
+      toast.success("Message sent successfully!");
+      setTimeout(() => setSubmitted(false), 5000);
+    } catch {
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

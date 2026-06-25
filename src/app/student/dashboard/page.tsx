@@ -17,48 +17,41 @@ import {
   User,
   TrendingUp,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { formatDate, formatTime, formatCurrency } from "@/lib/utils";
 import { PROGRESS_METRICS } from "@/types";
+import { useUser } from "@/hooks/use-user";
+import { useStudentDashboard } from "@/hooks/use-student-data";
 
 export default function StudentDashboard() {
-  const [metrics] = useState({
-    upcomingLessons: 3,
-    completedLessons: 18,
-    totalLessons: 24,
-    progress: 75,
-    instructorName: "Adebayo Ogunlesi",
-    paymentStatus: "completed" as const,
-    certificateEligible: true,
-    unreadNotifications: 2,
-  });
+  const { user, profile, loading: userLoading } = useUser();
+  const { stats, upcomingLessons, loading, error } = useStudentDashboard();
 
-  const upcomingLessons = [
-    {
-      id: 1,
-      date: "2025-12-20",
-      time: "09:00",
-      duration: 90,
-      instructor: "Adebayo Ogunlesi",
-      topic: "Highway Driving",
-    },
-    {
-      id: 2,
-      date: "2025-12-22",
-      time: "14:00",
-      duration: 90,
-      instructor: "Adebayo Ogunlesi",
-      topic: "Reverse Parking",
-    },
-    {
-      id: 3,
-      date: "2025-12-24",
-      time: "10:00",
-      duration: 60,
-      instructor: "Adebayo Ogunlesi",
-      topic: "Road Test Preparation",
-    },
-  ];
+  if (loading || userLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="student" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="student" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+            <p className="text-red-500">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -70,14 +63,16 @@ export default function StudentDashboard() {
               <h1 className="text-2xl lg:text-3xl font-bold text-primary">
                 Student Dashboard
               </h1>
-              <p className="text-gray-500">Welcome back, John!</p>
+              <p className="text-gray-500">
+                Welcome back, {user?.email?.split("@")[0] || "Student"}!
+              </p>
             </div>
             <Link href="/student/notifications">
               <Button variant="outline" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
-                {metrics.unreadNotifications > 0 && (
+                {(stats?.unreadNotifications ?? 0) > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error text-white text-xs">
-                    {metrics.unreadNotifications}
+                    {stats?.unreadNotifications}
                   </span>
                 )}
               </Button>
@@ -91,7 +86,7 @@ export default function StudentDashboard() {
                   <Calendar className="h-6 w-6 text-accent" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{metrics.upcomingLessons}</p>
+                  <p className="text-2xl font-bold text-primary">{stats?.upcomingLessonsCount ?? 0}</p>
                   <p className="text-sm text-gray-500">Upcoming Lessons</p>
                 </div>
               </CardContent>
@@ -102,7 +97,7 @@ export default function StudentDashboard() {
                   <CheckCircle2 className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{metrics.completedLessons}</p>
+                  <p className="text-2xl font-bold text-primary">{stats?.completedLessonsCount ?? 0}</p>
                   <p className="text-sm text-gray-500">Completed</p>
                 </div>
               </CardContent>
@@ -113,7 +108,7 @@ export default function StudentDashboard() {
                   <TrendingUp className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{metrics.progress}%</p>
+                  <p className="text-2xl font-bold text-primary">{stats?.progress ?? 0}%</p>
                   <p className="text-sm text-gray-500">Progress</p>
                 </div>
               </CardContent>
@@ -124,7 +119,7 @@ export default function StudentDashboard() {
                   <User className="h-6 w-6 text-accent" />
                 </div>
                 <div>
-                  <p className="font-bold text-primary">{metrics.instructorName}</p>
+                  <p className="font-bold text-primary">{stats?.instructorName ?? "Not Assigned"}</p>
                   <p className="text-sm text-gray-500">Your Instructor</p>
                 </div>
               </CardContent>
@@ -141,26 +136,30 @@ export default function StudentDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {upcomingLessons.map((lesson) => (
-                    <div
-                      key={lesson.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                          <Clock className="h-5 w-5 text-primary" />
+                  {upcomingLessons.length > 0 ? (
+                    upcomingLessons.map((lesson) => (
+                      <div
+                        key={lesson.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                            <Clock className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-primary">{lesson.topic}</p>
+                            <p className="text-sm text-gray-500">
+                              {formatDate(lesson.date)} at {lesson.time}
+                            </p>
+                            <p className="text-xs text-gray-400">{lesson.duration} min</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-primary">{lesson.topic}</p>
-                          <p className="text-sm text-gray-500">
-                            {formatDate(lesson.date)} at {lesson.time}
-                          </p>
-                          <p className="text-xs text-gray-400">{lesson.duration} min</p>
-                        </div>
+                        <Badge variant="outline">Scheduled</Badge>
                       </div>
-                      <Badge variant="outline">Scheduled</Badge>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">No upcoming lessons</p>
+                  )}
                   <Link href="/student/lessons">
                     <Button variant="outline" className="w-full mt-2">
                       View All Lessons
@@ -180,9 +179,9 @@ export default function StudentDashboard() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Course Completion</span>
-                  <span className="font-bold text-primary">{metrics.progress}%</span>
+                  <span className="font-bold text-primary">{stats?.progress ?? 0}%</span>
                 </div>
-                <Progress value={metrics.progress} className="h-3" />
+                <Progress value={stats?.progress ?? 0} className="h-3" />
                 <div className="space-y-3 mt-4">
                   {PROGRESS_METRICS.slice(0, 4).map((metric) => (
                     <div key={metric.name} className="space-y-1">
@@ -212,18 +211,29 @@ export default function StudentDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-lg bg-green-50">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-8 w-8 text-green-500" />
-                    <div>
-                      <p className="font-medium text-green-800">All Payments Completed</p>
-                      <p className="text-sm text-green-600">
-                        No outstanding fees
-                      </p>
+                {stats?.paymentStatus === "completed" ? (
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-green-50">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-8 w-8 text-green-500" />
+                      <div>
+                        <p className="font-medium text-green-800">All Payments Completed</p>
+                        <p className="text-sm text-green-600">No outstanding fees</p>
+                      </div>
                     </div>
+                    <Badge variant="success">Current</Badge>
                   </div>
-                  <Badge variant="success">Current</Badge>
-                </div>
+                ) : (
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-50">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-8 w-8 text-yellow-500" />
+                      <div>
+                        <p className="font-medium text-yellow-800">Outstanding Balance</p>
+                        <p className="text-sm text-yellow-600">Please complete your payment</p>
+                      </div>
+                    </div>
+                    <Badge variant="warning">Pending</Badge>
+                  </div>
+                )}
                 <Link href="/student/payments">
                   <Button variant="outline" className="w-full">
                     View Payment History
@@ -244,13 +254,19 @@ export default function StudentDashboard() {
                   <div className="flex items-center gap-3">
                     <Award className="h-8 w-8 text-accent" />
                     <div>
-                      <p className="font-medium text-primary">Eligible for Certificate</p>
+                      <p className="font-medium text-primary">
+                        {stats?.certificateEligible ? "Eligible for Certificate" : "Certificate Pending"}
+                      </p>
                       <p className="text-sm text-gray-500">
-                        Your instructor will review and recommend
+                        {stats?.certificateEligible
+                          ? "Your instructor will review and recommend"
+                          : "Complete all lessons to become eligible"}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="secondary">In Progress</Badge>
+                  <Badge variant={stats?.certificateEligible ? "secondary" : "warning"}>
+                    {stats?.certificateEligible ? "In Progress" : "Not Eligible"}
+                  </Badge>
                 </div>
                 <Link href="/student/certificates">
                   <Button variant="outline" className="w-full">

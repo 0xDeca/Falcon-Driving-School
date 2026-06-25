@@ -12,23 +12,43 @@ import {
   CreditCard,
   TrendingUp,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useAdminDashboard } from "@/hooks/use-admin-data";
 
 export default function AdminDashboard() {
-  const metrics = {
-    totalStudents: 245,
-    activeInstructors: 12,
-    totalRevenue: 4500000,
-    upcomingLessons: 48,
-    pendingCertificates: 3,
-  };
+  const { data, loading, error } = useAdminDashboard();
 
-  const recentPayments = [
-    { id: 1, student: "John Doe", amount: 150000, method: "OPay", status: "completed" as const, date: "2025-12-19" },
-    { id: 2, student: "Sarah Smith", amount: 180000, method: "Card", status: "completed" as const, date: "2025-12-18" },
-    { id: 3, student: "Mike Johnson", amount: 120000, method: "Transfer", status: "pending" as const, date: "2025-12-17" },
-    { id: 4, student: "Jane Ade", amount: 90000, method: "OPay", status: "completed" as const, date: "2025-12-16" },
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="admin" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="admin" />
+        <div className="flex-1 flex items-center justify-center text-red-500">
+          Failed to load dashboard data.
+        </div>
+      </div>
+    );
+  }
+
+  const recentPayments = data.recentPayments ?? [];
+
+  const activities = [
+    { action: "New enrollment", detail: `${data.totalStudents} total students enrolled`, time: "System update" },
+    { action: "Revenue collected", detail: `${formatCurrency(data.totalRevenue)} total revenue`, time: "System update" },
+    { action: "Upcoming lessons", detail: `${data.upcomingLessons} lessons scheduled`, time: "System update" },
+    { action: "Pending certificates", detail: `${data.pendingCertificates} awaiting approval`, time: "System update" },
   ];
 
   return (
@@ -48,7 +68,7 @@ export default function AdminDashboard() {
                     <Users className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-primary">{metrics.totalStudents}</p>
+                    <p className="text-2xl font-bold text-primary">{data.totalStudents}</p>
                     <p className="text-sm text-gray-500">Enrolled Students</p>
                   </div>
                 </div>
@@ -61,7 +81,7 @@ export default function AdminDashboard() {
                     <UserCheck className="h-6 w-6 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-primary">{metrics.activeInstructors}</p>
+                    <p className="text-2xl font-bold text-primary">{data.activeInstructors}</p>
                     <p className="text-sm text-gray-500">Active Instructors</p>
                   </div>
                 </div>
@@ -74,7 +94,7 @@ export default function AdminDashboard() {
                     <DollarSign className="h-6 w-6 text-accent" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-primary">{formatCurrency(metrics.totalRevenue)}</p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(data.totalRevenue)}</p>
                     <p className="text-sm text-gray-500">Total Revenue</p>
                   </div>
                 </div>
@@ -87,7 +107,7 @@ export default function AdminDashboard() {
                     <Calendar className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-primary">{metrics.upcomingLessons}</p>
+                    <p className="text-2xl font-bold text-primary">{data.upcomingLessons}</p>
                     <p className="text-sm text-gray-500">Upcoming Lessons</p>
                   </div>
                 </div>
@@ -100,7 +120,7 @@ export default function AdminDashboard() {
                     <Award className="h-6 w-6 text-yellow-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-primary">{metrics.pendingCertificates}</p>
+                    <p className="text-2xl font-bold text-primary">{data.pendingCertificates}</p>
                     <p className="text-sm text-gray-500">Pending Approvals</p>
                   </div>
                 </div>
@@ -118,20 +138,24 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {recentPayments.map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                      <div>
-                        <p className="font-medium text-primary">{payment.student}</p>
-                        <p className="text-sm text-gray-500">{payment.method}</p>
+                  {recentPayments.length === 0 ? (
+                    <p className="text-gray-400 text-center py-4">No recent payments</p>
+                  ) : (
+                    recentPayments.map((payment: any) => (
+                      <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                        <div>
+                          <p className="font-medium text-primary">{payment.student_name || payment.student_id || "Student"}</p>
+                          <p className="text-sm text-gray-500">{payment.method}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-primary">{formatCurrency(payment.amount)}</p>
+                          <Badge variant={payment.status === "completed" ? "success" : "warning"}>
+                            {payment.status}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-primary">{formatCurrency(payment.amount)}</p>
-                        <Badge variant={payment.status === "completed" ? "success" : "warning"}>
-                          {payment.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -145,26 +169,11 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {[
-                    { id: 1, name: "John Doe", course: "Automatic Driving", instructor: "Adebayo Ogunlesi" },
-                    { id: 2, name: "Jane Ade", course: "Defensive Driving", instructor: "Chidi Okonkwo" },
-                    { id: 3, name: "Paul Eze", course: "Manual Driving", instructor: "Ngozi Eze" },
-                  ].map((cert) => (
-                    <div key={cert.id} className="flex items-center justify-between p-3 rounded-lg bg-yellow-50">
-                      <div>
-                        <p className="font-medium text-yellow-800">{cert.name}</p>
-                        <p className="text-sm text-yellow-600">{cert.course} - Recommended by {cert.instructor}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button className="px-3 py-1 rounded bg-green-500 text-white text-xs font-medium hover:bg-green-600">
-                          Approve
-                        </button>
-                        <button className="px-3 py-1 rounded bg-red-500 text-white text-xs font-medium hover:bg-red-600">
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                  {data.pendingCertificates === 0 ? (
+                    <p className="text-gray-400 text-center py-4">No pending certificates</p>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">{data.pendingCertificates} certificate(s) pending review</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -191,12 +200,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {[
-                    { action: "New enrollment", detail: "Sarah Smith enrolled in Manual Driving", time: "2 hours ago" },
-                    { action: "Payment received", detail: "₦150,000 from John Doe via OPay", time: "3 hours ago" },
-                    { action: "Certificate approved", detail: "Jane Ade - Defensive Driving", time: "5 hours ago" },
-                    { action: "New instructor added", detail: "Zainab Abdullah joined the team", time: "1 day ago" },
-                  ].map((activity, i) => (
+                  {activities.map((activity, i) => (
                     <div key={i} className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0">
                       <div className="h-2 w-2 mt-2 rounded-full bg-accent" />
                       <div>

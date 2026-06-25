@@ -1,26 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Search, Mail, Phone, User, Eye } from "lucide-react";
-
-const students = [
-  { id: 1, name: "John Doe", email: "john@example.com", phone: "0800 000 0001", course: "Automatic Driving", progress: 80, nextLesson: "Dec 20, 9:00 AM" },
-  { id: 2, name: "Sarah Smith", email: "sarah@example.com", phone: "0800 000 0002", course: "Manual Driving", progress: 65, nextLesson: "Dec 20, 11:00 AM" },
-  { id: 3, name: "Mike Johnson", email: "mike@example.com", phone: "0800 000 0003", course: "Defensive Driving", progress: 45, nextLesson: "Dec 20, 2:00 PM" },
-  { id: 4, name: "Jane Ade", email: "jane@example.com", phone: "0800 000 0004", course: "Automatic Driving", progress: 90, nextLesson: "Dec 22, 10:00 AM" },
-];
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/use-user";
 
 export default function InstructorStudents() {
+  const { user, profile, loading: userLoading } = useUser();
   const [search, setSearch] = useState("");
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user || !profile) { setLoading(false); return; }
+
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const instructorId = (profile as any).id;
+
+        const { data: lessons, error: lessonsError } = await supabase
+          .from("lessons")
+          .select("enrollments!inner(student_id, students!inner(*, users(*)), courses(name))")
+          .eq("instructor_id", instructorId);
+
+        if (lessonsError) throw lessonsError;
+
+        const studentMap = new Map();
+        (lessons || []).forEach((l: any) => {
+          const sid = l.enrollments?.student_id;
+          if (sid && !studentMap.has(sid)) {
+            const studentData = l.enrollments?.students;
+            studentMap.set(sid, {
+              id: sid,
+              name: studentData?.users?.name ?? studentData?.users?.email ?? "Unknown",
+              email: studentData?.users?.email ?? "",
+              phone: studentData?.phone ?? "",
+              course: l.enrollments?.courses?.name ?? "Unknown",
+              progress: 0,
+              nextLesson: "",
+            });
+          }
+        });
+
+        setStudents(Array.from(studentMap.values()));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, [user, profile, userLoading]);
 
   const filtered = students.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (loading || userLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="instructor" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role="instructor" />
+        <div className="flex-1 flex items-center justify-center text-red-500">Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -66,9 +130,9 @@ export default function InstructorStudents() {
                         <p className="text-sm font-medium text-primary">{student.course}</p>
                         <div className="flex items-center gap-2">
                           <div className="w-20 h-2 bg-gray-200 rounded-full">
-                            <div className="h-full bg-accent rounded-full" style={{ width: `${student.progress}%` }} />
+                            <div className="h-full bg-accent rounded-full" style={{ width: `0%` }} />
                           </div>
-                          <span className="text-xs text-gray-500">{student.progress}%</span>
+                          <span className="text-xs text-gray-500">0%</span>
                         </div>
                       </div>
                       <Button variant="outline" size="sm">
@@ -79,6 +143,9 @@ export default function InstructorStudents() {
                 </CardContent>
               </Card>
             ))}
+            {filtered.length === 0 && (
+              <p className="text-center text-gray-500 py-8">No students found</p>
+            )}
           </div>
         </div>
       </div>
