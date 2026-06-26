@@ -28,6 +28,7 @@ export function useNotifications() {
 
   useEffect(() => {
     if (!userLoading) fetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userLoading]);
 
   const markAsRead = async (id: string) => {

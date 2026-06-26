@@ -1,98 +1,106 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, Phone } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Menu, X } from "lucide-react";
 
-const NAV_ITEMS = [
-  { label: "Home", href: "/" },
-  { label: "About", href: "/about" },
-  { label: "Courses", href: "/courses" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "Instructors", href: "/instructors" },
-  { label: "Gallery", href: "/gallery" },
-  { label: "Blog", href: "/blog" },
-  { label: "Contact", href: "/contact" },
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
+  { href: "/courses", label: "Courses" },
+  { href: "/gallery", label: "Gallery" },
+  { href: "/reviews", label: "Reviews" },
+  { href: "/contact", label: "Contact" },
 ];
+
+function TrafficLightLogo() {
+  return (
+    <Link href="/" className="flex items-center gap-2 group">
+      <div className="flex flex-col gap-[3px] rounded-md bg-surface-dark p-1.5 shadow-inner">
+        <span className="h-2.5 w-2.5 rounded-full bg-traffic-red transition-all group-hover:shadow-[0_0_8px_#EF4444]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-traffic-amber transition-all group-hover:shadow-[0_0_8px_#F59E0B]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-traffic-green transition-all group-hover:shadow-[0_0_8px_#22C55E]" />
+      </div>
+      <span className="display text-lg font-bold tracking-tight text-foreground">
+        Falcon<span className="text-traffic-green">.</span>
+      </span>
+    </Link>
+  );
+}
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
-            <span className="text-lg font-bold text-accent">F</span>
-          </div>
-          <div className="hidden sm:block">
-            <span className="text-lg font-bold text-primary">Falcon</span>
-            <span className="text-lg text-gray-600"> Driving School</span>
-          </div>
-        </Link>
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
+      <div className="container flex h-16 items-center justify-between">
+        <TrafficLightLogo />
 
-        <nav className="hidden lg:flex items-center gap-6">
-          {NAV_ITEMS.map((item) => (
+        <nav className="hidden md:flex items-center gap-1">
+          {navLinks.map((link) => (
             <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm font-medium text-gray-700 transition-colors hover:text-primary"
+              key={link.href}
+              href={link.href}
+              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
             >
-              {item.label}
+              {link.label}
             </Link>
           ))}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-3">
-          <a href="tel:+2348000000000" className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary">
-            <Phone className="h-4 w-4" />
-            <span>0800 000 0000</span>
-          </a>
-          <Link href="/auth/login">
-            <Button variant="outline" size="sm">Sign In</Button>
+        <div className="hidden md:flex items-center gap-2">
+          <Link
+            href="/auth/login"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium h-9 px-4 py-2 rounded-full hover:bg-accent hover:text-accent-foreground transition-colors"
+          >
+            Sign in
           </Link>
           <Link href="/auth/register">
-            <Button variant="gold" size="sm">Enroll Now</Button>
+            <Button className="rounded-full bg-traffic-green text-white hover:bg-traffic-green/90 shadow px-5">
+              Get started
+            </Button>
           </Link>
         </div>
 
         <button
-          className="lg:hidden"
+          className="md:hidden rounded-full p-2 hover:bg-secondary"
           onClick={() => setMobileOpen(!mobileOpen)}
         >
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
-      <div
-        className={cn(
-          "fixed inset-0 top-16 z-50 bg-white lg:hidden transition-transform duration-300",
-          mobileOpen ? "translate-x-0" : "translate-x-full"
-        )}
-      >
-        <nav className="container mx-auto flex flex-col gap-4 p-6">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-lg font-medium text-gray-700 py-2 border-b border-gray-100"
-              onClick={() => setMobileOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
-          <div className="flex flex-col gap-3 mt-4">
-            <Link href="/auth/login" className="w-full">
-              <Button variant="outline" className="w-full">Sign In</Button>
-            </Link>
-            <Link href="/auth/register" className="w-full">
-              <Button variant="gold" className="w-full">Enroll Now</Button>
-            </Link>
+      {mobileOpen && (
+        <div className="md:hidden border-t border-border bg-background">
+          <div className="container py-4 space-y-4">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="block text-sm text-muted-foreground hover:text-foreground py-2"
+                onClick={() => setMobileOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="pt-4 border-t border-border space-y-3">
+              <Link
+                href="/auth/login"
+                className="block text-sm text-muted-foreground hover:text-foreground"
+                onClick={() => setMobileOpen(false)}
+              >
+                Sign in
+              </Link>
+              <Link href="/auth/register" onClick={() => setMobileOpen(false)}>
+                <Button className="w-full rounded-full bg-traffic-green text-white hover:bg-traffic-green/90">
+                  Get started
+                </Button>
+              </Link>
+            </div>
           </div>
-        </nav>
-      </div>
+        </div>
+      )}
     </header>
   );
 }

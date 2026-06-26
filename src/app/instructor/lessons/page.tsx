@@ -56,6 +56,7 @@ export default function InstructorLessons() {
     if (userLoading) return;
     if (!user || !profile) { setLoading(false); return; }
     fetchLessons();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, profile, userLoading]);
 
   const handleStartLesson = async (lessonId: string) => {

@@ -3,12 +3,17 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { CookieOptions } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn("Supabase env vars not configured - skipping auth middleware");
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -55,7 +60,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/pricing") ||
     pathname.startsWith("/instructors") ||
     pathname.startsWith("/gallery") ||
-    pathname.startsWith("/testimonials") ||
+    pathname.startsWith("/reviews") ||
     pathname.startsWith("/contact") ||
     pathname.startsWith("/faq") ||
     pathname.startsWith("/blog") ||

@@ -1,114 +1,72 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import {
-  Star,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle,
-  Award,
-  Users,
-  Car,
-  Shield,
-  ArrowRight,
-  Phone,
-  Mail,
-  MapPin,
-  Clock,
-} from "lucide-react";
-import { COURSES_DATA, TESTIMONIALS_DATA, FAQ_DATA } from "@/types";
-import { formatCurrency, truncateText } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { Car, Clock, BadgeCheck, Cpu, CalendarRange, ShieldCheck } from "lucide-react";
 
 function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-primary/90">
-      <div className="absolute inset-0 bg-[url('/images/hero/pattern.svg')] opacity-10" />
-      <div className="container mx-auto px-4 py-20 md:py-32">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-8 animate-fade-in">
-            <Badge variant="secondary" className="text-xs uppercase tracking-wider">
-              Nigeria&apos;s Trusted Driving School
-            </Badge>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              Learn to Drive with{" "}
-              <span className="text-accent">Confidence</span>
-            </h1>
-            <p className="text-lg text-gray-300 max-w-lg">
-              Professional driving instruction from certified experts. Master the road
-              with Nigeria&apos;s most trusted driving school.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Link href="/auth/register">
-                <Button variant="gold" size="xl" className="text-base">
-                  Enroll Now <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/courses">
-                <Button
-                  variant="outline"
-                  size="xl"
-                  className="text-base border-white/30 text-white hover:bg-white/10"
-                >
-                  Learn More
-                </Button>
-              </Link>
-              <Link href="/contact">
-                <Button
-                  variant="ghost"
-                  size="xl"
-                  className="text-base text-gray-300 hover:text-white"
-                >
-                  Contact Us
-                </Button>
-              </Link>
-            </div>
-          </div>
-          <div className="hidden lg:flex justify-center">
-            <div className="relative">
-              <div className="w-80 h-80 rounded-full bg-accent/20 flex items-center justify-center">
-                <div className="w-72 h-72 rounded-full bg-accent/30 flex items-center justify-center">
-                  <Car className="h-32 w-32 text-accent" />
-                </div>
-              </div>
-            </div>
-          </div>
+    <section className="relative isolate min-h-[92vh] flex items-center overflow-hidden">
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: "url(https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=1920&q=80)",
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-br from-black/85 via-black/65 to-black/30" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+      <div className="relative z-10 container py-24">
+        <span className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur px-3 py-1 text-xs font-medium text-white/90 border border-white/15">
+          <span className="h-1.5 w-1.5 rounded-full bg-traffic-green" />
+          Now enrolling &mdash; Abuja
+        </span>
+        <h1 className="mt-5 display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-white leading-[0.95] max-w-4xl">
+          FALCON
+          <br />
+          DRIVING <span className="text-traffic-green">SCHOOL</span>
+        </h1>
+        <p className="mt-6 max-w-xl text-lg text-white/80">
+          We help people in Abuja become confident, capable drivers &mdash; with modern vehicles, certified instructors and a programme that actually fits your schedule.
+        </p>
+        <div className="mt-9 flex flex-wrap gap-3">
+          <Link href="/auth/register">
+            <Button className="rounded-full bg-traffic-green text-white hover:bg-traffic-green/90 hover:scale-[1.03] hover:shadow-[0_0_28px_var(--tw-shadow-color)] shadow px-7 h-12 text-base transition-all">
+              Sign up
+            </Button>
+          </Link>
+          <Link href="/courses">
+            <Button variant="outline" className="rounded-full border-white/30 bg-white/5 text-white backdrop-blur hover:bg-white/15 hover:scale-[1.03] px-7 h-12 text-base transition-all">
+              View courses
+            </Button>
+          </Link>
         </div>
       </div>
     </section>
   );
 }
 
-function StatsSection() {
-  const stats = [
-    { icon: Users, value: "5,000+", label: "Students Trained" },
-    { icon: Award, value: "98%", label: "Pass Rate" },
-    { icon: Car, value: "15+", label: "Training Vehicles" },
-    { icon: Shield, value: "10+", label: "Years Experience" },
+function ServicesSection() {
+  const services = [
+    { icon: Car, title: "Automatic & Manual Lessons", description: "Learn on the transmission you'll actually drive. Both options available with modern, well-maintained training cars.", bg: "#EF4444" },
+    { icon: Clock, title: "Flexible Lesson Time", description: "Mornings, evenings, weekends — book lessons around work, school or your business. No rigid timetables.", bg: "#F59E0B" },
+    { icon: BadgeCheck, title: "Licensing Program", description: "We handle your Learners Permit and 5-year Drivers License processing end-to-end. You focus on driving.", bg: "#22C55E" },
   ];
 
   return (
-    <section className="py-16 bg-white">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {stats.map((stat, i) => {
-            const Icon = stat.icon;
+    <section className="py-20 md:py-28 bg-background">
+      <div className="container">
+        <p className="text-sm font-semibold uppercase tracking-widest text-traffic-green">Our services</p>
+        <h2 className="mt-3 display text-3xl md:text-5xl font-bold max-w-2xl">Everything you need to get on the road.</h2>
+        <div className="mt-12 grid gap-5 md:grid-cols-3">
+          {services.map((s, i) => {
+            const Icon = s.icon;
             return (
-              <div key={i} className="text-center space-y-2">
-                <div className="flex justify-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
-                    <Icon className="h-8 w-8 text-accent" />
-                  </div>
+              <div key={i} className="group h-full rounded-3xl border border-border bg-card p-7 transition-all hover:-translate-y-1 hover:shadow-xl hover:border-foreground/20">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `color-mix(in oklab, ${s.bg} 15%, transparent)` }}>
+                  <Icon className="h-6 w-6" style={{ color: s.bg }} />
                 </div>
-                <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                <p className="text-sm text-gray-600">{stat.label}</p>
+                <h3 className="mt-5 display text-xl font-semibold">{s.title}</h3>
+                <p className="mt-2 text-muted-foreground text-sm leading-relaxed">{s.description}</p>
               </div>
             );
           })}
@@ -118,256 +76,35 @@ function StatsSection() {
   );
 }
 
-function CoursesSection() {
+function WhyChooseUsSection() {
+  const features = [
+    { icon: Car, title: "Modern training cars", description: "Clean, safe vehicles that match what you'll drive after the program." },
+    { icon: Cpu, title: "Virtual simulation", description: "Practice tricky scenarios safely before they ever happen on the road." },
+    { icon: CalendarRange, title: "Flexible scheduling", description: "We work around your life — not the other way around." },
+    { icon: ShieldCheck, title: "Certified instructors", description: "Experienced, patient, and accredited to teach in Nigeria." },
+  ];
+
   return (
-    <section className="py-20 bg-gray-50">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-primary mb-4">
-            Our Driving Programs
-          </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Choose from our comprehensive range of driving programs designed for every skill level
+    <section className="py-20 md:py-28 bg-surface-dark text-white">
+      <div className="container grid gap-12 lg:grid-cols-2 items-center">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-widest text-traffic-amber">Why choose us</p>
+          <h2 className="mt-3 display text-3xl md:text-5xl font-bold leading-tight">A smarter, safer way to learn how to drive.</h2>
+          <p className="mt-5 text-white/70 text-lg max-w-xl">
+            We combine real-world road training with virtual simulation, defensive driving theory and one-on-one coaching. You won&rsquo;t just pass a test &mdash; you&rsquo;ll actually drive well.
           </p>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {COURSES_DATA.slice(0, 6).map((course) => (
-            <Card key={course.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                  <Car className="h-6 w-6 text-accent" />
-                </div>
-                <h3 className="text-lg font-semibold text-primary group-hover:text-accent transition-colors">
-                  {course.name}
-                </h3>
-                <p className="text-sm text-gray-600">{truncateText(course.description, 120)}</p>
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <div>
-                    <p className="text-sm text-gray-500">Duration</p>
-                    <p className="font-medium text-primary">{course.duration}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">Price</p>
-                    <p className="font-bold text-accent">{formatCurrency(course.price)}</p>
-                  </div>
-                </div>
-                <Link href="/auth/register">
-                  <Button variant="gold" className="w-full">
-                    Enroll Now
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="text-center mt-8">
-          <Link href="/courses">
-            <Button variant="outline" size="lg">
-              View All Programs <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function TestimonialsSection() {
-  const [current, setCurrent] = useState(0);
-
-  return (
-    <section className="py-20 bg-primary text-white">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            What Our Students Say
-          </h2>
-          <p className="text-gray-300 max-w-2xl mx-auto">
-            Hear from our graduates about their experience at Falcon Driving School
-          </p>
-        </div>
-        <div className="max-w-3xl mx-auto">
-          <div className="relative">
-            <div className="overflow-hidden">
-              <div
-                className="flex transition-transform duration-500"
-                style={{ transform: `translateX(-${current * 100}%)` }}
-              >
-                {TESTIMONIALS_DATA.map((testimonial) => (
-                  <div key={testimonial.id} className="min-w-full px-4">
-                    <Card className="bg-white/10 border-white/20 text-white">
-                      <CardContent className="p-8 text-center space-y-4">
-                        <div className="flex justify-center gap-1">
-                          {Array.from({ length: testimonial.rating }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className="h-5 w-5 fill-accent text-accent"
-                            />
-                          ))}
-                        </div>
-                        <p className="text-lg italic text-gray-200">
-                          &ldquo;{testimonial.text}&rdquo;
-                        </p>
-                        <div>
-                          <p className="font-semibold">{testimonial.name}</p>
-                          <p className="text-sm text-gray-400">{testimonial.course}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                ))}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {features.map((f, i) => {
+            const Icon = f.icon;
+            return (
+              <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-5 h-full transition-all hover:border-traffic-green/60 hover:bg-white/10">
+                <Icon className="h-6 w-6 text-traffic-green" />
+                <h3 className="mt-3 font-semibold">{f.title}</h3>
+                <p className="mt-1 text-sm text-white/70">{f.description}</p>
               </div>
-            </div>
-            <button
-              onClick={() =>
-                setCurrent((prev) =>
-                  prev === 0 ? TESTIMONIALS_DATA.length - 1 : prev - 1
-                )
-              }
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 lg:-translate-x-12 flex h-10 w-10 items-center justify-center rounded-full bg-accent text-primary hover:bg-accent/90"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() =>
-                setCurrent((prev) =>
-                  prev === TESTIMONIALS_DATA.length - 1 ? 0 : prev + 1
-                )
-              }
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 lg:translate-x-12 flex h-10 w-10 items-center justify-center rounded-full bg-accent text-primary hover:bg-accent/90"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="flex justify-center gap-2 mt-6">
-            {TESTIMONIALS_DATA.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrent(i)}
-                className={`h-2 w-2 rounded-full transition-all ${
-                  i === current ? "bg-accent w-6" : "bg-white/30"
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ContactSection() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
-  });
-
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      if (!res.ok) throw new Error("Failed to send");
-      toast.success("Message sent! We'll get back to you shortly.");
-      setFormData({ name: "", email: "", phone: "", message: "" });
-    } catch {
-      toast.error("Failed to send message. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <section className="py-20 bg-gray-50">
-      <div className="container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-12">
-          <div className="space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-primary">
-              Get In Touch
-            </h2>
-            <p className="text-gray-600">
-              Ready to start your driving journey? Contact us today!
-            </p>
-            <div className="space-y-4">
-              {[
-                { icon: Phone, info: "0800 000 0000", sub: "Call us anytime" },
-                { icon: Mail, info: "info@falcondrivingschool.com", sub: "Email us" },
-                { icon: MapPin, info: "123 Ibrahim Babangida Way, Abuja", sub: "Visit our office" },
-                { icon: Clock, info: "Mon-Fri: 7am-6pm, Sat: 8am-4pm", sub: "Office hours" },
-              ].map(({ icon: Icon, info, sub }, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
-                    <Icon className="h-5 w-5 text-accent" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-primary">{info}</p>
-                    <p className="text-sm text-gray-500">{sub}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Name</label>
-                <Input
-                  placeholder="Your name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Email</label>
-                <Input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Phone</label>
-              <Input
-                placeholder="0800 000 0000"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Message</label>
-              <Textarea
-                placeholder="How can we help you?"
-                rows={4}
-                value={formData.message}
-                onChange={(e) =>
-                  setFormData({ ...formData, message: e.target.value })
-                }
-                required
-              />
-            </div>
-            <Button type="submit" variant="gold" size="lg" className="w-full">
-              Send Message
-            </Button>
-          </form>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -376,27 +113,21 @@ function ContactSection() {
 
 function CTASection() {
   return (
-    <section className="py-20 bg-primary">
-      <div className="container mx-auto px-4 text-center space-y-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-white">
-          Ready to Start Your Driving Journey?
-        </h2>
-        <p className="text-gray-300 max-w-2xl mx-auto text-lg">
-          Join thousands of confident drivers who trusted Falcon Driving School for their training.
+    <section className="py-20 md:py-28">
+      <div className="container text-center max-w-5xl">
+        <h2 className="display text-3xl md:text-5xl font-bold">Get started today.</h2>
+        <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
+          Modern car training, virtual simulation and a schedule that fits your life. Sign up in two minutes and pick the programme that matches you.
         </p>
-        <div className="flex flex-wrap justify-center gap-4">
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link href="/auth/register">
-            <Button variant="gold" size="xl" className="text-base">
-              Enroll Now
+            <Button className="rounded-full bg-traffic-red text-white hover:bg-traffic-red/90 hover:scale-[1.03] hover:shadow-[0_0_28px_var(--tw-shadow-color)] shadow px-7 h-12 transition-all">
+              Create your account
             </Button>
           </Link>
-          <Link href="/contact">
-            <Button
-              variant="outline"
-              size="xl"
-              className="text-base border-white/30 text-white hover:bg-white/10"
-            >
-              Contact Us
+          <Link href="/courses">
+            <Button variant="outline" className="rounded-full px-7 h-12 hover:scale-[1.03] transition-all">
+              Browse courses
             </Button>
           </Link>
         </div>
@@ -409,10 +140,8 @@ export function HomePage() {
   return (
     <>
       <HeroSection />
-      <StatsSection />
-      <CoursesSection />
-      <TestimonialsSection />
-      <ContactSection />
+      <ServicesSection />
+      <WhyChooseUsSection />
       <CTASection />
     </>
   );
