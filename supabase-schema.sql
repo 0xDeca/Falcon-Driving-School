@@ -242,8 +242,8 @@ CREATE POLICY "Users can insert own record" ON users
   FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update own record" ON users
   FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
-CREATE POLICY "Admins can view all users" ON users
-  FOR SELECT USING (public.is_admin());
+CREATE POLICY "Admins can manage all users" ON users
+  FOR ALL USING (public.is_admin());
 
 -- Students policies
 CREATE POLICY "Students can view own profile" ON students

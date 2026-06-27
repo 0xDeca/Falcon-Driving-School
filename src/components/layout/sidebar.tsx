@@ -54,6 +54,7 @@ const NAV_ITEMS = {
     { label: "Vehicles", href: "/admin/vehicles", icon: Car },
     { label: "Payments", href: "/admin/payments", icon: CreditCard },
     { label: "Certificates", href: "/admin/certificates", icon: Award },
+    { label: "Assessments", href: "/admin/assessments", icon: BarChart3 },
     { label: "Blog", href: "/admin/blog", icon: FileText },
     { label: "Reports", href: "/admin/reports", icon: BarChart3 },
     { label: "Settings", href: "/admin/settings", icon: Settings },
