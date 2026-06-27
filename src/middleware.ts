@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { CookieOptions } from "@supabase/ssr";
 
+const ADMIN_SUBDOMAIN = "admin";
+
 export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -37,11 +39,20 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
+  const hostname = request.nextUrl.hostname;
+  const isAdminSubdomain = hostname.startsWith(`${ADMIN_SUBDOMAIN}.`);
+
+  // Block admin routes on the main domain
+  if (!isAdminSubdomain && (pathname.startsWith("/admin") || pathname === "/auth/admin-login")) {
+    if (pathname.startsWith("/api/admin")) {
+      return NextResponse.next({ request });
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = "/404";
+    return NextResponse.rewrite(url);
+  }
 
   // Protected routes
   const isProtectedRoute =
@@ -49,25 +60,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/instructor") ||
     pathname.startsWith("/admin");
 
-  // Auth routes (login, register, etc.)
   const isAuthRoute = pathname.startsWith("/auth") && !pathname.startsWith("/auth/admin-login");
   const isAdminAuthRoute = pathname.startsWith("/auth/admin-login");
-
-  // Public routes
-  const isPublicRoute =
-    pathname === "/" ||
-    pathname.startsWith("/about") ||
-    pathname.startsWith("/courses") ||
-    pathname.startsWith("/pricing") ||
-    pathname.startsWith("/instructors") ||
-    pathname.startsWith("/gallery") ||
-    pathname.startsWith("/reviews") ||
-    pathname.startsWith("/contact") ||
-    pathname.startsWith("/faq") ||
-    pathname.startsWith("/blog") ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    pathname.startsWith("/images");
 
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();
@@ -90,7 +84,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Admin login: only admins can view, others get redirected
   if (isAdminAuthRoute && user) {
     const { data: roleData } = await supabase
       .from("users")
@@ -104,13 +97,11 @@ export async function middleware(request: NextRequest) {
       url.pathname = "/admin/dashboard";
       return NextResponse.redirect(url);
     }
-    // Non-admin users on admin login → redirect to their own dashboard
     const url = request.nextUrl.clone();
     url.pathname = `/${role || "student"}/dashboard`;
     return NextResponse.redirect(url);
   }
 
-  // Role-based access
   if (user && isProtectedRoute) {
     const { data: roleData } = await supabase
       .from("users")
