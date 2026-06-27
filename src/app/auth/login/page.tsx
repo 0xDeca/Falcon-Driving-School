@@ -31,18 +31,8 @@ export default function LoginPage() {
       if (error) throw error;
 
       if (data.user) {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("role")
-          .eq("id", data.user.id)
-          .single();
-
-        const role = userData?.role;
-
         toast.success("Login successful!");
-        if (role === "admin") router.push("/admin/dashboard");
-        else if (role === "instructor") router.push("/instructor/dashboard");
-        else router.push("/student/dashboard");
+        window.location.href = "/admin/dashboard";
       }
     } catch (error: unknown) {
       const err = error as { message?: string };
