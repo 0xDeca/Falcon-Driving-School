@@ -16,7 +16,7 @@ const config: Config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         "traffic-red": {
-          DEFAULT: "#EF4444",
+          DEFAULT: "#DC2626",
           50: "#FEF2F2",
           100: "#FEE2E2",
           200: "#FECACA",
@@ -42,7 +42,7 @@ const config: Config = {
           900: "#78350F",
         },
         "traffic-green": {
-          DEFAULT: "#22C55E",
+          DEFAULT: "#15803D",
           50: "#F0FDF4",
           100: "#DCFCE7",
           200: "#BBF7D0",
@@ -56,9 +56,9 @@ const config: Config = {
         },
         "surface-dark": "#1A1A1A",
         "surface-darker": "#0A0A0A",
-        success: "#22C55E",
+        success: "#15803D",
         warning: "#F59E0B",
-        error: "#EF4444",
+        error: "#DC2626",
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",

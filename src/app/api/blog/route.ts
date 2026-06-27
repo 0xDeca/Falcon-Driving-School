@@ -1,16 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getServerSupabase } from "@/lib/supabase-server";
 
 export async function GET() {
   try {
-    const supabase = getSupabase();
+    const supabase = getServerSupabase();
 
     const { data, error } = await supabase
       .from("blog_posts")
@@ -31,7 +24,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { title, slug, content, excerpt, featured_image_url, category_id, status, seo_title, seo_description, seo_keywords } = body;
 
-    const supabase = getSupabase();
+    const supabase = getServerSupabase();
 
     const postData: any = {
       title,
@@ -69,7 +62,7 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const { id, ...updateData } = body;
 
-    const supabase = getSupabase();
+    const supabase = getServerSupabase();
 
     if (updateData.status === "published") {
       updateData.published_at = new Date().toISOString();
@@ -94,7 +87,7 @@ export async function DELETE(request: Request) {
   try {
     const { id } = await request.json();
 
-    const supabase = getSupabase();
+    const supabase = getServerSupabase();
 
     const { error } = await supabase
       .from("blog_posts")

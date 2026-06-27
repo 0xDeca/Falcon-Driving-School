@@ -58,7 +58,7 @@ export function useStudentDashboard() {
         // Get lessons
         const { data: allLessons } = await supabase
           .from("lessons")
-          .select("*, instructors!inner(*, users(*))")
+          .select("*, enrollments!inner(*), instructors!inner(*, users(*))")
           .eq("enrollments.student_id", studentId);
         
         const now = new Date().toISOString();
@@ -150,7 +150,7 @@ export function useStudentLessons() {
         const studentId = (profile as { id: string }).id;
         const { data } = await supabase
           .from("lessons")
-          .select("*, instructors!inner(*, users(*)), lesson_evaluations(*)")
+          .select("*, enrollments!inner(*), instructors!inner(*, users(*)), lesson_evaluations(*)")
           .eq("enrollments.student_id", studentId)
           .order("scheduled_date", { ascending: false });
         

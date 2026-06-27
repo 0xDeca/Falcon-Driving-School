@@ -1,18 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getServerSupabase } from "@/lib/supabase-server";
 
 export async function POST(request: Request) {
   try {
     const { recommendationId, adminComment } = await request.json();
 
-    const supabase = getSupabase();
+    const supabase = getServerSupabase();
 
     const { error } = await supabase
       .from("certificate_recommendations")

@@ -22,9 +22,9 @@ function TrafficLightLogo() {
   return (
     <Link href="/" className="flex items-center gap-2 group">
       <div className="flex flex-col gap-[3px] rounded-md bg-surface-dark p-1.5 shadow-inner">
-        <span className="h-2.5 w-2.5 rounded-full bg-traffic-red transition-all group-hover:shadow-[0_0_8px_#EF4444]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-traffic-red transition-all group-hover:shadow-[0_0_8px_#DC2626]" />
         <span className="h-2.5 w-2.5 rounded-full bg-traffic-amber transition-all group-hover:shadow-[0_0_8px_#F59E0B]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-traffic-green transition-all group-hover:shadow-[0_0_8px_#22C55E]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-traffic-green transition-all group-hover:shadow-[0_0_8px_#15803D]" />
       </div>
       <span className="display text-lg font-bold tracking-tight text-white">
         Falcon<span className="text-traffic-green">.</span>
@@ -45,7 +45,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="text-white text-sm font-semibold mb-3">Explore</h4>
+          <h3 className="text-white text-sm font-semibold mb-3">Explore</h3>
           <ul className="space-y-2 text-sm">
             {footerLinks.explore.map((link) => (
               <li key={link.href}>
@@ -58,7 +58,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="text-white text-sm font-semibold mb-3">Portals</h4>
+          <h3 className="text-white text-sm font-semibold mb-3">Portals</h3>
           <ul className="space-y-2 text-sm">
             {footerLinks.portals.map((link) => (
               <li key={link.href}>
@@ -71,7 +71,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="text-white text-sm font-semibold mb-3">Reach us</h4>
+          <h3 className="text-white text-sm font-semibold mb-3">Reach us</h3>
           <ul className="space-y-3 text-sm">
             <li className="flex gap-2">
               <MapPin className="mt-0.5 h-4 w-4 text-traffic-amber shrink-0" />

@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:fix": "npx supabase db push --linked",
+    "db:fix:sql": "echo 'Run this in Supabase Dashboard > SQL Editor:' && cat supabase/migrations/202606270001_fix_rls_recursion.sql"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

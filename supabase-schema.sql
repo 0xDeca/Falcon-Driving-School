@@ -209,17 +209,33 @@ ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE certificate_recommendations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
+-- Helper function that bypasses RLS (used by admin policies)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin');
+$$;
+
 -- Users policies
 CREATE POLICY "Users can view own record" ON users
   FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can insert own record" ON users
+  FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update own record" ON users
+  FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 CREATE POLICY "Admins can view all users" ON users
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR SELECT USING (public.is_admin());
 
 -- Students policies
 CREATE POLICY "Students can view own profile" ON students
   FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Students can insert own profile" ON students
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Students can update own profile" ON students
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Instructors can view assigned students" ON students
   FOR SELECT USING (
     EXISTS (
@@ -228,20 +244,30 @@ CREATE POLICY "Instructors can view assigned students" ON students
       WHERE e.student_id = students.id AND l.instructor_id = (SELECT id FROM instructors WHERE user_id = auth.uid())
     )
   );
-CREATE POLICY "Admins can view all students" ON students
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
+CREATE POLICY "Admins can manage all students" ON students
+  FOR ALL USING (public.is_admin());
+
+-- Instructors policies
+CREATE POLICY "Instructors can view own profile" ON instructors
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Instructors can insert own profile" ON instructors
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Instructors can update own profile" ON instructors
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admins can manage instructors" ON instructors
+  FOR ALL USING (public.is_admin());
 
 -- Enrollments policies
 CREATE POLICY "Students can view own enrollments" ON enrollments
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM students WHERE id = enrollments.student_id AND user_id = auth.uid())
   );
-CREATE POLICY "Admins can manage enrollments" ON enrollments
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+CREATE POLICY "Students can insert own enrollments" ON enrollments
+  FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM students WHERE id = enrollments.student_id AND user_id = auth.uid())
   );
+CREATE POLICY "Admins can manage enrollments" ON enrollments
+  FOR ALL USING (public.is_admin());
 
 -- Lessons policies
 CREATE POLICY "Students can view own lessons" ON lessons
@@ -256,10 +282,16 @@ CREATE POLICY "Instructors can view own lessons" ON lessons
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM instructors WHERE id = lessons.instructor_id AND user_id = auth.uid())
   );
-CREATE POLICY "Admins can view all lessons" ON lessons
+CREATE POLICY "Admins can manage all lessons" ON lessons
+  FOR ALL USING (public.is_admin());
+
+-- Lesson evaluations policies
+CREATE POLICY "Instructors can manage own evaluations" ON lesson_evaluations
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM lessons WHERE id = lesson_evaluations.lesson_id AND instructor_id = (SELECT id FROM instructors WHERE user_id = auth.uid()))
   );
+CREATE POLICY "Admins can manage evaluations" ON lesson_evaluations
+  FOR ALL USING (public.is_admin());
 
 -- Payments policies
 CREATE POLICY "Students can view own payments" ON payments
@@ -267,9 +299,23 @@ CREATE POLICY "Students can view own payments" ON payments
     EXISTS (SELECT 1 FROM students WHERE id = payments.student_id AND user_id = auth.uid())
   );
 CREATE POLICY "Admins can manage payments" ON payments
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+  FOR ALL USING (public.is_admin());
+
+-- Certificates policies
+CREATE POLICY "Students can view own certificates" ON certificates
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM students WHERE id = certificates.student_id AND user_id = auth.uid())
   );
+CREATE POLICY "Admins can manage certificates" ON certificates
+  FOR ALL USING (public.is_admin());
+
+-- Certificate recommendations policies
+CREATE POLICY "Instructors can manage own recommendations" ON certificate_recommendations
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM instructors WHERE id = certificate_recommendations.instructor_id AND user_id = auth.uid())
+  );
+CREATE POLICY "Admins can manage recommendations" ON certificate_recommendations
+  FOR ALL USING (public.is_admin());
 
 -- Notifications policies
 CREATE POLICY "Users can view own notifications" ON notifications

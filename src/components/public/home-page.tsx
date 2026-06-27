@@ -47,9 +47,9 @@ function HeroSection() {
 
 function ServicesSection() {
   const services = [
-    { icon: Car, title: "Automatic & Manual Lessons", description: "Learn on the transmission you'll actually drive. Both options available with modern, well-maintained training cars.", bg: "#EF4444" },
+    { icon: Car, title: "Automatic & Manual Lessons", description: "Learn on the transmission you'll actually drive. Both options available with modern, well-maintained training cars.", bg: "#DC2626" },
     { icon: Clock, title: "Flexible Lesson Time", description: "Mornings, evenings, weekends — book lessons around work, school or your business. No rigid timetables.", bg: "#F59E0B" },
-    { icon: BadgeCheck, title: "Licensing Program", description: "We handle your Learners Permit and 5-year Drivers License processing end-to-end. You focus on driving.", bg: "#22C55E" },
+    { icon: BadgeCheck, title: "Licensing Program", description: "We handle your Learners Permit and 5-year Drivers License processing end-to-end. You focus on driving.", bg: "#15803D" },
   ];
 
   return (
