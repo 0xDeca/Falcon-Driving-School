@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
 interface AdminDashboardData {
@@ -94,19 +94,19 @@ export function useAdminCourses() {
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("courses")
-        .select("*")
-        .order("created_at", { ascending: true });
-      setCourses(data ?? []);
-      setLoading(false);
-    };
-    fetch();
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("courses")
+      .select("*")
+      .order("created_at", { ascending: true });
+    setCourses(data ?? []);
+    setLoading(false);
   }, []);
 
-  return { courses, loading };
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { courses, loading, refetch: fetch };
 }
 
 export function useAdminVehicles() {
