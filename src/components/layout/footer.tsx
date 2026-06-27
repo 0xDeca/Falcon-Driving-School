@@ -10,8 +10,8 @@ const footerLinks = {
     { href: "/reviews", label: "Reviews" },
     { href: "/contact", label: "Contact" },
   ],
-  portals: [
-    { href: "/auth/login", label: "Student sign in" },
+  account: [
+    { href: "/auth/login", label: "Sign in" },
     { href: "/auth/register", label: "Create account" },
   ],
 };
@@ -56,9 +56,9 @@ export function Footer() {
         </div>
 
         <div>
-          <h3 className="text-white text-sm font-semibold mb-3">Portals</h3>
+          <h3 className="text-white text-sm font-semibold mb-3">Account</h3>
           <ul className="space-y-2 text-sm">
-            {footerLinks.portals.map((link) => (
+            {footerLinks.account.map((link) => (
               <li key={link.href}>
                 <Link href={link.href} className="hover:text-traffic-green transition-colors">
                   {link.label}

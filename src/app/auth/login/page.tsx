@@ -40,8 +40,9 @@ export default function LoginPage() {
         const role = roleData?.role;
 
         if (role === "admin") {
-          toast.success("Redirecting to admin login...");
-          window.location.href = "/auth/admin-login";
+          await supabase.auth.signOut();
+          toast.error("Invalid email or password");
+          setLoading(false);
           return;
         }
 
