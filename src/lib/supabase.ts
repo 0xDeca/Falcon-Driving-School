@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
-let supabaseInstance: ReturnType<typeof createClient> | null = null;
+let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null;
 
 function getSupabaseClient() {
   if (supabaseInstance) return supabaseInstance;
@@ -10,12 +10,11 @@ function getSupabaseClient() {
     console.error("Missing Supabase environment variables");
     return createMockClient();
   }
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey);
   return supabaseInstance;
 }
 
 function createMockClient() {
-  const chain = (): any => new Proxy({}, { get: () => chain });
   return {
     from: () => ({
       select: () => ({ data: null, error: null }),
