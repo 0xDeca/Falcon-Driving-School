@@ -50,7 +50,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/admin");
 
   // Auth routes (login, register, etc.)
-  const isAuthRoute = pathname.startsWith("/auth");
+  const isAuthRoute = pathname.startsWith("/auth") && !pathname.startsWith("/auth/admin-login");
+  const isAdminAuthRoute = pathname.startsWith("/auth/admin-login");
 
   // Public routes
   const isPublicRoute =
@@ -70,7 +71,7 @@ export async function middleware(request: NextRequest) {
 
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
+    url.pathname = pathname.startsWith("/admin") ? "/auth/admin-login" : "/auth/login";
     return NextResponse.redirect(url);
   }
 
@@ -87,6 +88,26 @@ export async function middleware(request: NextRequest) {
       url.pathname = `/${role}/dashboard`;
       return NextResponse.redirect(url);
     }
+  }
+
+  // Admin login: only admins can view, others get redirected
+  if (isAdminAuthRoute && user) {
+    const { data: roleData } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const role = roleData?.role;
+    if (role === "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/dashboard";
+      return NextResponse.redirect(url);
+    }
+    // Non-admin users on admin login → redirect to their own dashboard
+    const url = request.nextUrl.clone();
+    url.pathname = `/${role || "student"}/dashboard`;
+    return NextResponse.redirect(url);
   }
 
   // Role-based access
