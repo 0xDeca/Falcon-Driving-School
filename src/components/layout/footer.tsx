@@ -13,7 +13,6 @@ const footerLinks = {
   portals: [
     { href: "/auth/login", label: "Student sign in" },
     { href: "/auth/register", label: "Create account" },
-    { href: "/instructor/dashboard", label: "Instructor portal" },
   ],
 };
 

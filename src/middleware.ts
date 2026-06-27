@@ -2,7 +2,23 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { CookieOptions } from "@supabase/ssr";
 
-const ADMIN_SUBDOMAIN = "admin";
+const SUBDOMAINS = {
+  admin: "admin",
+  staff: "staff",
+} as const;
+
+function getSubdomain(hostname: string): string | null {
+  for (const sub of Object.values(SUBDOMAINS)) {
+    if (hostname.startsWith(`${sub}.`)) return sub;
+  }
+  return null;
+}
+
+function rewrite404(request: NextRequest): NextResponse {
+  const url = request.nextUrl.clone();
+  url.pathname = "/404";
+  return NextResponse.rewrite(url);
+}
 
 export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -16,42 +32,45 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(
-          cookiesToSet: {
-            name: string;
-            value: string;
-            options: CookieOptions;
-          }[]
-        ) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
+    cookies: {
+      getAll() { return request.cookies.getAll(); },
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options));
       },
-    }
-  );
+    },
+  });
 
   const { data: { user } } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname;
-  const isAdminSubdomain = hostname.startsWith(`${ADMIN_SUBDOMAIN}.`);
+  const subdomain = getSubdomain(hostname);
 
-  // Block admin routes on the main domain
-  if (!isAdminSubdomain && (pathname.startsWith("/admin") || pathname === "/auth/admin-login")) {
-    if (pathname.startsWith("/api/admin")) {
-      return NextResponse.next({ request });
+  // Allow API routes through
+  if (pathname.startsWith("/api")) {
+    return NextResponse.next({ request });
+  }
+
+  // Main domain: only student routes allowed
+  if (!subdomain) {
+    if (pathname.startsWith("/admin") || pathname.startsWith("/instructor") || pathname === "/auth/admin-login") {
+      return rewrite404(request);
     }
-    const url = request.nextUrl.clone();
-    url.pathname = "/404";
-    return NextResponse.rewrite(url);
+  }
+
+  // Staff subdomain: only instructor routes allowed
+  if (subdomain === "staff") {
+    if (pathname.startsWith("/admin") || pathname.startsWith("/student") || pathname === "/auth/admin-login" || pathname === "/auth/register") {
+      return rewrite404(request);
+    }
+  }
+
+  // Admin subdomain: only admin routes allowed
+  if (subdomain === "admin") {
+    if (pathname.startsWith("/instructor") || pathname.startsWith("/student") || pathname === "/auth/register") {
+      return rewrite404(request);
+    }
   }
 
   // Protected routes
@@ -65,7 +84,13 @@ export async function middleware(request: NextRequest) {
 
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = pathname.startsWith("/admin") ? "/auth/admin-login" : "/auth/login";
+    if (pathname.startsWith("/admin")) {
+      url.pathname = "/auth/admin-login";
+    } else if (subdomain === "staff") {
+      url.pathname = "/auth/login";
+    } else {
+      url.pathname = "/auth/login";
+    }
     return NextResponse.redirect(url);
   }
 
