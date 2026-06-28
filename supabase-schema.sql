@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS students (
   address TEXT,
   profile_photo_url TEXT,
   enrollment_date DATE DEFAULT CURRENT_DATE,
-  UNIQUE(user_id)
+  UNIQUE(user_id),
+  UNIQUE(phone)
 );
 
 -- Instructors profile

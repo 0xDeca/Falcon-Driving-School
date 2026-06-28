@@ -16,6 +16,11 @@ export async function POST(request: Request) {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
+    if (phone && role === "student") {
+      const { data: existing } = await adminClient.from("students").select("id").eq("phone", phone).maybeSingle();
+      if (existing) return NextResponse.json({ error: "Phone number already in use" }, { status: 409 });
+    }
+
     const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
       email, password, email_confirm: true,
       user_metadata: { name, phone, role },

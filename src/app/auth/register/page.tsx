@@ -61,6 +61,13 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      const { data: dupPhone } = await supabase.from("students").select("id").eq("phone", formData.phone).maybeSingle();
+      if (dupPhone) {
+        setErrors({ phone: "Phone number already registered" });
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
