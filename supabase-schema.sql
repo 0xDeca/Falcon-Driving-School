@@ -193,6 +193,12 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can insert contact messages" ON contact_messages
+  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admins can view contact messages" ON contact_messages
+  FOR SELECT USING (public.is_admin());
+
 -- Indexes for performance
 CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_students_user_id ON students(user_id);

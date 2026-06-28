@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, ArrowLeft, Share2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import DOMPurify from "dompurify";
 
 interface BlogPostClientProps {
   slug: string;
@@ -92,7 +93,7 @@ export function BlogPostClient({ slug }: BlogPostClientProps) {
           <div className="grid lg:grid-cols-3 gap-12">
             <article className="lg:col-span-2 prose prose-lg max-w-none">
               <div
-                dangerouslySetInnerHTML={{ __html: post.content }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
                 className="text-gray-700 leading-relaxed space-y-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-primary [&_h2]:mt-8 [&_h2]:mb-4 [&_p]:mb-4 [&_p]:leading-relaxed"
               />
               <div className="flex flex-wrap gap-2 mt-8 pt-8 border-t border-gray-200">

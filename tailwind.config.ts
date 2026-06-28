@@ -84,6 +84,8 @@ const config: Config = {
         "fade-in": "fadeIn 0.5s ease-in-out",
         "slide-up": "slideUp 0.5s ease-out",
         "slide-down": "slideDown 0.3s ease-out",
+        "accordion-up": "accordionUp 0.2s ease-out",
+        "accordion-down": "accordionDown 0.2s ease-out",
       },
       keyframes: {
         fadeIn: {
@@ -97,6 +99,14 @@ const config: Config = {
         slideDown: {
           "0%": { transform: "translateY(-10px)", opacity: "0" },
           "100%": { transform: "translateY(0)", opacity: "1" },
+        },
+        accordionUp: {
+          "0%": { height: "var(--radix-accordion-content-height)" },
+          "100%": { height: "0" },
+        },
+        accordionDown: {
+          "0%": { height: "0" },
+          "100%": { height: "var(--radix-accordion-content-height)" },
         },
       },
     },

@@ -13,6 +13,19 @@ export async function POST(request: Request) {
       );
     }
 
+    if (typeof name !== "string" || name.length > 200) {
+      return NextResponse.json({ error: "Invalid name" }, { status: 400 });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+    }
+
+    if (typeof message !== "string" || message.length > 5000) {
+      return NextResponse.json({ error: "Invalid message" }, { status: 400 });
+    }
+
     const supabase = getServerSupabase();
     const { error } = await supabase
       .from("contact_messages")

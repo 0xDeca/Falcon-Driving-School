@@ -25,6 +25,7 @@ export default function AdminBlog() {
     seo_title: "",
     seo_description: "",
     seo_keywords: "",
+    featured_image: "",
   });
   const [categories, setCategories] = useState<any[]>([]);
 
@@ -141,7 +142,12 @@ export default function AdminBlog() {
                     </div>
                     <div className="space-y-2">
                       <Label>Featured Image</Label>
-                      <Input type="file" accept="image/*" />
+                      <Input type="file" accept="image/*" onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setPostData((prev) => ({ ...prev, featured_image: file.name }));
+                        }
+                      }} />
                     </div>
                   </div>
 

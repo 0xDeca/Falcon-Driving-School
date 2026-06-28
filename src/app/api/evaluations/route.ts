@@ -12,6 +12,17 @@ export async function POST(request: Request) {
       skills_covered, recommendation
     } = body;
 
+    if (!lesson_id || !student_id || !instructor_id || !recommendation) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const scores = [steering_score, parking_score, reverse_parking_score, road_awareness_score, confidence_score];
+    for (const score of scores) {
+      if (score != null && (typeof score !== "number" || score < 1 || score > 10)) {
+        return NextResponse.json({ error: "Scores must be between 1 and 10" }, { status: 400 });
+      }
+    }
+
     const supabase = getServerSupabase();
 
     // Create lesson evaluation

@@ -187,14 +187,14 @@ export default function AdminDashboard() {
                     {recentPayments.length === 0 ? (
                       <tr><td colSpan={5} className="py-8 text-center text-gray-400">No recent payments</td></tr>
                     ) : (
-                      recentPayments.map((payment: any, i: number) => (
-                        <tr key={payment.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                          <td className="py-3.5 px-6">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">
-                                {(payment.student_name?.[0] ?? "?").toUpperCase()}
-                              </div>
-                              <span className="font-medium text-primary">{payment.student_name || `Student #${i + 1}`}</span>
+                        recentPayments.map((payment: any, i: number) => (
+                          <tr key={payment.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                            <td className="py-3.5 px-6">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">
+                                  {(payment.students?.user_id?.[0] ?? "?").toUpperCase()}
+                                </div>
+                                <span className="font-medium text-primary">{payment.students?.user_id?.slice(0, 8) || `Student #${i + 1}`}</span>
                             </div>
                           </td>
                           <td className="py-3.5 px-6 font-semibold text-primary">{formatCurrency(payment.amount)}</td>

@@ -25,7 +25,6 @@ export async function middleware(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    console.warn("Supabase env vars not configured - skipping auth middleware");
     return NextResponse.next({ request });
   }
 
@@ -42,7 +41,14 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  let user: { id: string } | null = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    return NextResponse.next({ request });
+  }
+
   const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname;
   const subdomain = getSubdomain(hostname);
@@ -51,6 +57,25 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/api")) {
     return NextResponse.next({ request });
   }
+
+  // =========================================================================
+  // NEW CODE INJECTED HERE: SUBDOMAIN URL REWRITES
+  // =========================================================================
+  // If a user hits admin.falcondrivingschool.ng/dashboard, 
+  // it translates internally to /admin/dashboard without changing the URL bar.
+  if (subdomain === "admin" && !pathname.startsWith("/admin")) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/admin${pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  if (subdomain === "staff" && !pathname.startsWith("/instructor")) {
+    const url = request.nextUrl.clone();
+    // Assuming your staff dashboard folder is named /instructor based on your rules below
+    url.pathname = `/instructor${pathname}`;
+    return NextResponse.rewrite(url);
+  }
+  // =========================================================================
 
   // Subdomain-based isolation (when user has a custom domain)
   if (subdomain === "staff") {

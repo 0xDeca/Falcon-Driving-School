@@ -59,7 +59,7 @@ export default function InstructorEvaluations() {
           if (sid && !studentMap.has(sid)) {
             studentMap.set(sid, {
               id: sid,
-              name: studentData?.users?.name ?? studentData?.users?.email ?? "Unknown",
+              name: studentData?.users?.email ?? "Unknown",
             });
           }
         });
@@ -92,6 +92,7 @@ export default function InstructorEvaluations() {
         .select("id")
         .eq("instructor_id", instructorId)
         .eq("enrollments.student_id", selectedStudent)
+        // Note: Filtering on joined column; ensure the query includes enrollments data
         .order("scheduled_date", { ascending: false })
         .limit(1)
         .single();
@@ -186,7 +187,7 @@ export default function InstructorEvaluations() {
                   </div>
                   <div className="space-y-2">
                     <Label>Lesson Date *</Label>
-                    <Input type="date" required />
+                    <Input type="date" required value={""} onChange={() => {}} />
                   </div>
                 </div>
               </CardContent>

@@ -99,7 +99,7 @@ export default function AdminStudents() {
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => {
                 const csv = "Name,Email,Phone,Status\n" + students.map((s: any) =>
-                  `${s.users?.email ?? ""},${s.users?.email ?? ""},${s.phone ?? ""},${s.enrollments?.[0]?.status ?? "active"}`
+                  `${s.users?.email?.split("@")[0] ?? ""},${s.users?.email ?? ""},${s.phone ?? ""},${s.enrollments?.[0]?.status ?? "active"}`
                 ).join("\n");
                 const blob = new Blob([csv], { type: "text/csv" });
                 const a = document.createElement("a");

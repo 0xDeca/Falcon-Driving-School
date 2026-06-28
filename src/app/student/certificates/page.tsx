@@ -11,7 +11,6 @@ import { useStudentCertificates } from "@/hooks/use-certificates";
 import jsPDF from "jspdf";
 
 const statusConfig: Record<string, { label: string; variant: "warning" | "success" | "destructive" | "secondary" }> = {
-  in_progress: { label: "In Progress", variant: "warning" },
   pending: { label: "Pending Approval", variant: "warning" },
   approved: { label: "Approved", variant: "success" },
   rejected: { label: "Rejected", variant: "destructive" },
@@ -26,7 +25,7 @@ const downloadPDF = async (cert: any) => {
   doc.setFontSize(14);
   doc.text("This certifies that", 105, 85, { align: "center" });
   doc.setFontSize(18);
-  doc.text(cert.certificate_number, 105, 100, { align: "center" });
+  doc.text(cert.students?.full_name ?? cert.students?.users?.email ?? "Student", 105, 100, { align: "center" });
   doc.setFontSize(14);
   doc.text("has successfully completed the", 105, 115, { align: "center" });
   doc.text(cert.courses?.name || "Course", 105, 130, { align: "center" });

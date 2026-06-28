@@ -17,7 +17,7 @@ export default function AdminAssessments() {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from("lesson_evaluations")
           .select("*, lessons!inner(*, enrollments!inner(*, students!inner(*, users!inner(*))), instructors!inner(*, users!inner(*)))")
           .order("created_at", { ascending: false });

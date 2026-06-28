@@ -58,7 +58,7 @@ export default function StudentProgress() {
   const totalLessons = lessons.length;
   const overallProgress = totalLessons > 0
     ? Math.round((completedCount / totalLessons) * 100)
-    : 75;
+    : 0;
 
   const calcAvg = (field: string): number => {
     if (evaluations.length === 0) return 0;
@@ -70,11 +70,11 @@ export default function StudentProgress() {
     { name: "Steering Control", score: calcAvg("steering_score") },
     { name: "Parking", score: calcAvg("parking_score") },
     { name: "Reverse Parking", score: calcAvg("reverse_parking_score") },
-    { name: "Traffic Signs", score: calcAvg("road_awareness_score") },
+    { name: "Traffic Signs", score: calcAvg("traffic_signs_score") },
     { name: "Road Safety", score: calcAvg("road_awareness_score") },
     { name: "Highway Driving", score: calcAvg("confidence_score") },
     { name: "Defensive Driving", score: Math.round(
-      (calcAvg("steering_score") + calcAvg("parking_score") + calcAvg("reverse_parking_score") + calcAvg("road_awareness_score") + calcAvg("confidence_score")) / 5
+      (calcAvg("steering_score") + calcAvg("parking_score") + calcAvg("reverse_parking_score") + calcAvg("traffic_signs_score") + calcAvg("road_awareness_score") + calcAvg("confidence_score")) / 6
     )},
   ];
 

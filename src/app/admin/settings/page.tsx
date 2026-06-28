@@ -46,9 +46,15 @@ export default function AdminSettings() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const { data: existing } = await supabase
+        .from("settings")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+      const settingsId = existing?.id ?? crypto.randomUUID();
       const { error } = await supabase
         .from("settings")
-        .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
+        .upsert({ id: settingsId, ...settings, updated_at: new Date().toISOString() });
       if (error) throw error;
       toast.success("Settings saved successfully!");
     } catch {

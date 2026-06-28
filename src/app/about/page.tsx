@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Clock, Car, Gamepad2, Users, Shield, CheckCircle } from "lucide-react";
@@ -30,12 +31,13 @@ export default function AboutPage() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12 items-center mb-20">
-            <div className="rounded-xl overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+            <div className="rounded-xl overflow-hidden relative h-80">
+              <Image
                 src="https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=800&q=80"
                 alt="Virtual driving simulator"
-                className="w-full h-80 object-cover"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
               />
             </div>
             <div className="space-y-4">

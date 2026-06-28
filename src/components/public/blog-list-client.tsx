@@ -141,8 +141,8 @@ export function BlogListClient() {
                       </Button>
                     </Link>
                   </div>
-                  <div className="hidden lg:flex bg-gray-100 rounded-xl h-64 items-center justify-center">
-                    <span className="text-gray-400">Featured Image</span>
+                  <div className="hidden lg:flex bg-gray-100 rounded-xl h-64 items-center justify-center" role="img" aria-label="Featured post image placeholder">
+                    <span className="text-gray-400" aria-hidden="true">Featured Image</span>
                   </div>
                 </div>
               </CardContent>
@@ -186,8 +186,8 @@ export function BlogListClient() {
               {filtered.map((post) => (
                 <Link key={post.id} href={`/blog/${post.slug}`}>
                   <Card className="group hover:shadow-lg transition-all h-full">
-                    <div className="bg-gray-100 h-48 rounded-t-xl flex items-center justify-center">
-                      <span className="text-gray-400">Post Image</span>
+                    <div className="bg-gray-100 h-48 rounded-t-xl flex items-center justify-center" role="img" aria-label="Post image placeholder">
+                      <span className="text-gray-400" aria-hidden="true">Post Image</span>
                     </div>
                     <CardContent className="p-6 space-y-3">
                       <Badge variant="secondary" className="text-xs">

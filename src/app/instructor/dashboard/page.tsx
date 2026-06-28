@@ -68,7 +68,7 @@ export default function InstructorDashboard() {
           if (sid && !studentMap.has(sid)) {
             studentMap.set(sid, {
               id: sid,
-              name: l.enrollments?.students?.users?.name ?? l.enrollments?.students?.users?.email ?? "Unknown",
+              name: l.enrollments?.students?.users?.email ?? "Unknown",
               course: l.enrollments?.courses?.name ?? "Unknown",
               email: l.enrollments?.students?.users?.email ?? "",
             });
@@ -302,19 +302,19 @@ export default function InstructorDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {myStudents.map((student, i) => (
+                    {myStudents.map((student) => (
                       <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 font-medium text-primary">{student.name}</td>
                         <td className="py-3 px-4 text-gray-600">{student.course}</td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <div className="w-24 h-2 bg-gray-200 rounded-full">
-                              <div className="h-full bg-accent rounded-full" style={{ width: `${65 + i * 8}%` }} />
+                              <div className="h-full bg-accent rounded-full" style={{ width: `0%` }} />
                             </div>
-                            <span className="text-xs text-gray-500">{65 + i * 8}%</span>
+                            <span className="text-xs text-gray-500">0%</span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-gray-600">Dec 20, 9:00 AM</td>
+                        <td className="py-3 px-4 text-gray-600">N/A</td>
                         <td className="py-3 px-4">
                           <Link href={`/instructor/students`}>
                             <Button variant="ghost" size="sm">View</Button>

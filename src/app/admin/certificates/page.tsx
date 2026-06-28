@@ -20,7 +20,7 @@ export default function AdminCertificates() {
       try {
         const { data } = await supabase
           .from("certificate_recommendations")
-          .select("*, students(*), courses(*), instructors!inner(*, users!inner(*))")
+          .select("*, students!inner(*, users!inner(*)), courses(*), instructors!inner(*, users!inner(*))")
           .eq("status", "pending")
           .order("created_at", { ascending: false });
         setPendingCerts(data ?? []);
@@ -118,10 +118,10 @@ export default function AdminCertificates() {
                           <Award className="h-6 w-6 text-yellow-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-primary">{cert.students?.name ?? "Unknown"}</h3>
+                          <h3 className="font-semibold text-primary">{cert.students?.users?.email ?? "Unknown"}</h3>
                           <p className="text-sm text-gray-500">{cert.courses?.name ?? "N/A"}</p>
                           <div className="flex flex-wrap gap-3 mt-2 text-sm text-gray-500">
-                            <span>Instructor: {cert.instructors?.users?.name ?? "N/A"}</span>
+                            <span>Instructor: {cert.instructors?.users?.email ?? "N/A"}</span>
                             <span>Lessons: {cert.lessons_completed ?? "N/A"}</span>
                             <span>Avg Score: {cert.avg_score ?? "N/A"}%</span>
                             <span>Date: {cert.created_at?.split("T")[0] ?? "N/A"}</span>

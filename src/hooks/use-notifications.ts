@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "./use-user";
 
@@ -10,7 +10,7 @@ export function useNotifications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetch = async () => {
+  const fetch = useCallback(async () => {
     if (!user) return;
     try {
       const { data } = await supabase
@@ -24,12 +24,11 @@ export function useNotifications() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!userLoading) fetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, userLoading]);
+  }, [user, userLoading, fetch]);
 
   const markAsRead = async (id: string) => {
     await supabase.from("notifications").update({ is_read: true }).eq("id", id);

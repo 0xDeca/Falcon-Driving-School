@@ -68,7 +68,7 @@ export default function StudentDashboard() {
               </p>
             </div>
             <Link href="/student/notifications">
-              <Button variant="outline" size="icon" className="relative">
+              <Button variant="outline" size="icon" className="relative" aria-label={`Notifications${(stats?.unreadNotifications ?? 0) > 0 ? `, ${stats?.unreadNotifications} unread` : ""}`}>
                 <Bell className="h-5 w-5" />
                 {(stats?.unreadNotifications ?? 0) > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error text-white text-xs">

@@ -13,8 +13,6 @@ import toast from "react-hot-toast";
 export default function StudentProfile() {
   const { user, profile, loading: userLoading, refresh } = useUser();
   const [profileData, setProfileData] = useState({
-    fullName: "",
-    email: "",
     phone: "",
     address: "",
   });
@@ -23,8 +21,6 @@ export default function StudentProfile() {
   useEffect(() => {
     if (user) {
       setProfileData({
-        fullName: (profile as any)?.full_name || user?.email?.split("@")[0] || "Student",
-        email: user?.email || "",
         phone: (profile as any)?.phone || "",
         address: (profile as any)?.address || "",
       });
@@ -86,7 +82,7 @@ export default function StudentProfile() {
                   </button>
                 </div>
                 <h2 className="mt-4 text-xl font-semibold text-primary">
-                  {profileData.fullName}
+                  {user?.email?.split("@")[0] || "Student"}
                 </h2>
                 <p className="text-sm text-gray-500">Student</p>
               </div>
@@ -94,17 +90,8 @@ export default function StudentProfile() {
               <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Full Name</label>
-                    <Input
-                      value={profileData.fullName}
-                      onChange={(e) =>
-                        setProfileData({ ...profileData, fullName: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Email</label>
-                    <Input value={profileData.email} disabled />
+                    <Input value={user?.email ?? ""} disabled />
                   </div>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">

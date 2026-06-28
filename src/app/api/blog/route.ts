@@ -24,6 +24,16 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { title, slug, content, excerpt, featured_image_url, category_id, status, seo_title, seo_description, seo_keywords } = body;
 
+    if (!title || !slug || !content) {
+      return NextResponse.json({ error: "Title, slug, and content are required" }, { status: 400 });
+    }
+    if (typeof title !== "string" || title.length > 200) {
+      return NextResponse.json({ error: "Invalid title" }, { status: 400 });
+    }
+    if (typeof slug !== "string" || !/^[a-z0-9-]+$/.test(slug)) {
+      return NextResponse.json({ error: "Invalid slug format" }, { status: 400 });
+    }
+
     const supabase = getServerSupabase();
 
     const postData: any = {

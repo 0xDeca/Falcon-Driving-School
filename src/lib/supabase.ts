@@ -14,18 +14,22 @@ function getSupabaseClient() {
   return supabaseInstance;
 }
 
-function createMockClient() {
+function createMockClient(): ReturnType<typeof createBrowserClient> {
   return {
     from: () => ({
-      select: () => ({ data: null, error: null }),
+      data: null,
+      error: null,
+      count: null,
+      select: () => new Proxy({}, { get: () => () => ({ data: null, error: null, count: null }) }),
       insert: () => Promise.resolve({ data: null, error: null }),
       update: () => ({ eq: () => Promise.resolve({ data: null, error: null }) }),
       upsert: () => Promise.resolve({ data: null, error: null }),
       delete: () => ({ eq: () => Promise.resolve({ data: null, error: null }) }),
-      eq: () => ({ data: null, error: null, single: async () => ({ data: null, error: null }), order: () => ({ data: null, error: null }), gte: () => ({ data: null, error: null }), limit: () => ({ data: null, error: null }) }),
-      order: () => ({ data: null, error: null }),
-      gte: () => ({ data: null, error: null }),
-      limit: () => ({ data: null, error: null }),
+      eq: () => new Proxy({}, { get: () => () => ({ data: null, error: null, count: null }) }),
+      in: () => new Proxy({}, { get: () => () => ({ data: null, error: null, count: null }) }),
+      order: () => new Proxy({}, { get: () => () => ({ data: null, error: null, count: null }) }),
+      gte: () => new Proxy({}, { get: () => () => ({ data: null, error: null, count: null }) }),
+      limit: () => new Proxy({}, { get: () => () => ({ data: null, error: null, count: null }) }),
       single: async () => ({ data: null, error: null }),
       maybeSingle: async () => ({ data: null, error: null }),
     }),
@@ -39,7 +43,7 @@ function createMockClient() {
       updateUser: async () => ({ data: { user: null }, error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
     },
-  };
+  } as unknown as ReturnType<typeof createBrowserClient>;
 }
 
-export const supabase: ReturnType<typeof createBrowserClient> = typeof window !== "undefined" ? getSupabaseClient()! : (createMockClient() as any);
+export const supabase = typeof window !== "undefined" ? getSupabaseClient()! : createMockClient();

@@ -122,6 +122,8 @@ export function Sidebar({ role }: SidebarProps) {
       <button
         className="lg:hidden fixed top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white"
         onClick={() => setMobileOpen(!mobileOpen)}
+        aria-expanded={mobileOpen}
+        aria-label={mobileOpen ? "Close menu" : "Open menu"}
       >
         {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
