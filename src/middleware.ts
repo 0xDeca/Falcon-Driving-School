@@ -52,21 +52,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  // Main domain: only student routes allowed
-  if (!subdomain) {
-    if (pathname.startsWith("/admin") || pathname.startsWith("/instructor") || pathname === "/auth/admin-login") {
-      return rewrite404(request);
-    }
-  }
-
-  // Staff subdomain: only instructor routes allowed
+  // Subdomain-based isolation (when user has a custom domain)
   if (subdomain === "staff") {
     if (pathname.startsWith("/admin") || pathname.startsWith("/student") || pathname === "/auth/admin-login" || pathname === "/auth/register") {
       return rewrite404(request);
     }
   }
 
-  // Admin subdomain: only admin routes allowed
   if (subdomain === "admin") {
     if (pathname.startsWith("/instructor") || pathname.startsWith("/student") || pathname === "/auth/register") {
       return rewrite404(request);
