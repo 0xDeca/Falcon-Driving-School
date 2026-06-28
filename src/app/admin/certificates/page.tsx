@@ -17,12 +17,14 @@ export default function AdminCertificates() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from("certificate_recommendations")
-        .select("*, students(*), courses(*), instructors!inner(*, users!inner(*))")
-        .eq("status", "pending")
-        .order("created_at", { ascending: false });
-      setPendingCerts(data ?? []);
+      try {
+        const { data } = await supabase
+          .from("certificate_recommendations")
+          .select("*, students(*), courses(*), instructors!inner(*, users!inner(*))")
+          .eq("status", "pending")
+          .order("created_at", { ascending: false });
+        setPendingCerts(data ?? []);
+      } catch { /* handled */ }
       setLoading(false);
     };
     fetch();

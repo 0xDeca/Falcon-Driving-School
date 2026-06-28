@@ -42,4 +42,4 @@ function createMockClient() {
   };
 }
 
-export const supabase: any = typeof window !== "undefined" ? getSupabaseClient() : createMockClient();
+export const supabase: ReturnType<typeof createBrowserClient> = typeof window !== "undefined" ? getSupabaseClient()! : (createMockClient() as any);

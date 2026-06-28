@@ -28,8 +28,10 @@ export default function AdminCourses() {
   const [couponForm, setCouponForm] = useState(EMPTY_COUPON);
 
   const fetchCoupons = useCallback(async () => {
-    const { data } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
-    setCoupons(data ?? []);
+    try {
+      const { data } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
+      setCoupons(data ?? []);
+    } catch { /* handled by null fallback */ }
   }, []);
 
   useEffect(() => { fetchCoupons(); }, [fetchCoupons]);

@@ -27,15 +27,17 @@ export default function AdminSettings() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from("settings")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-      if (data) {
-        setSettings((prev) => ({ ...prev, ...data }));
-      }
+      try {
+        const { data } = await supabase
+          .from("settings")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        if (data) {
+          setSettings((prev) => ({ ...prev, ...data }));
+        }
+      } catch { /* use defaults */ }
       setLoading(false);
     };
     fetch();

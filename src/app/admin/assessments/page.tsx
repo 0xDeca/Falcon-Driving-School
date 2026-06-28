@@ -16,11 +16,13 @@ export default function AdminAssessments() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from("lesson_evaluations")
-        .select("*, lessons!inner(*, enrollments!inner(*, students!inner(*, users!inner(*))), instructors!inner(*, users!inner(*)))")
-        .order("created_at", { ascending: false });
-      setEvaluations(data ?? []);
+      try {
+        const { data } = await supabase
+          .from("lesson_evaluations")
+          .select("*, lessons!inner(*, enrollments!inner(*, students!inner(*, users!inner(*))), instructors!inner(*, users!inner(*)))")
+          .order("created_at", { ascending: false });
+        setEvaluations(data ?? []);
+      } catch { /* handled */ }
       setLoading(false);
     };
     fetch();

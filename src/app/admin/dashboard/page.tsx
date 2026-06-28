@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useAdminDashboard } from "@/hooks/use-admin-data";
-import { useState } from "react";
 
 const statCards = [
   { label: "Students", key: "totalStudents", icon: Users, change: "+12%", trend: "up" },
@@ -31,7 +30,6 @@ const statCards = [
 
 export default function AdminDashboard() {
   const { data, loading, error } = useAdminDashboard();
-  const [searchQuery, setSearchQuery] = useState("");
 
   if (loading) {
     return (
@@ -75,9 +73,8 @@ export default function AdminDashboard() {
             <input
               type="text"
               placeholder="Search here..."
+              aria-label="Search"
               className="flex-1 bg-transparent border-none outline-none text-sm text-gray-600 placeholder:text-gray-400"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <div className="flex items-center gap-3">

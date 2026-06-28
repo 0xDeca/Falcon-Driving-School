@@ -16,11 +16,13 @@ export default function AdminPayments() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from("payments")
-        .select("*, students!inner(name, email)")
-        .order("created_at", { ascending: false });
-      setTransactions(data ?? []);
+      try {
+        const { data } = await supabase
+          .from("payments")
+          .select("*, students!inner(name, email)")
+          .order("created_at", { ascending: false });
+        setTransactions(data ?? []);
+      } catch { /* handled */ }
       setLoading(false);
     };
     fetch();

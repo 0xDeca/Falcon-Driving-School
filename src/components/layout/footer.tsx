@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MapPin, Phone, Instagram } from "lucide-react";
+import { TrafficLightLogo } from "@/components/ui/traffic-light-logo";
 
 const footerLinks = {
   explore: [
@@ -15,21 +16,6 @@ const footerLinks = {
     { href: "/auth/register", label: "Create account" },
   ],
 };
-
-function TrafficLightLogo() {
-  return (
-    <Link href="/" className="flex items-center gap-2 group">
-      <div className="flex flex-col gap-[3px] rounded-md bg-surface-dark p-1.5 shadow-inner">
-        <span className="h-2.5 w-2.5 rounded-full bg-traffic-red transition-all group-hover:shadow-[0_0_8px_#DC2626]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-traffic-amber transition-all group-hover:shadow-[0_0_8px_#F59E0B]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-traffic-green transition-all group-hover:shadow-[0_0_8px_#15803D]" />
-      </div>
-      <span className="display text-lg font-bold tracking-tight text-white">
-        Falcon<span className="text-traffic-green">.</span>
-      </span>
-    </Link>
-  );
-}
 
 export function Footer() {
   return (
