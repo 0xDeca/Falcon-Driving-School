@@ -1,31 +1,16 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { getServiceSupabase } from "@/lib/supabase-server";
+import { getServiceSupabase, createServerSupabase } from "@/lib/supabase-server";
 
 export async function POST(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
-    }
+    const supabase = await createServerSupabase();
 
-    const authHeader = request.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!authHeader) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      global: { headers: { Authorization: `Bearer ${authHeader}` } },
-    });
-
-    const { data: { user }, error: authError } = await tempClient.auth.getUser(authHeader);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: caller } = await tempClient.from("users").select("role").eq("id", user.id).single();
+    const { data: caller } = await supabase.from("users").select("role").eq("id", user.id).single();
     if (caller?.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
