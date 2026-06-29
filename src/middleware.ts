@@ -59,15 +59,18 @@ export async function middleware(request: NextRequest) {
   }
 
   // Determine effective pathname after subdomain rewriting
+  // Auth routes are excluded from rewrite so admin-login on admin subdomain doesn't loop
   let effectivePath = originalPath;
   let needsRewrite = false;
 
-  if (subdomain === "admin" && !originalPath.startsWith("/admin")) {
-    effectivePath = `/admin${originalPath}`;
-    needsRewrite = true;
-  } else if (subdomain === "staff" && !originalPath.startsWith("/instructor")) {
-    effectivePath = `/instructor${originalPath}`;
-    needsRewrite = true;
+  if (!originalPath.startsWith("/auth")) {
+    if (subdomain === "admin" && !originalPath.startsWith("/admin")) {
+      effectivePath = `/admin${originalPath}`;
+      needsRewrite = true;
+    } else if (subdomain === "staff" && !originalPath.startsWith("/instructor")) {
+      effectivePath = `/instructor${originalPath}`;
+      needsRewrite = true;
+    }
   }
 
   // Subdomain-based isolation
