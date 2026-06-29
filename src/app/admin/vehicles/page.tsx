@@ -19,7 +19,7 @@ export default function AdminVehicles() {
     name: "",
     model: "",
     plate_number: "",
-    transmission: "Automatic",
+    transmission_type: "automatic",
     status: "available",
     insurance_expiry: "",
     maintenance_schedule: "",
@@ -27,10 +27,18 @@ export default function AdminVehicles() {
 
   const handleSave = async () => {
     try {
-      await supabase.from("vehicles").insert([form]);
+      await supabase.from("vehicles").insert([{
+        name: form.name,
+        model: form.model,
+        plate_number: form.plate_number,
+        transmission_type: form.transmission_type,
+        status: form.status,
+        insurance_expiry: form.insurance_expiry || null,
+        maintenance_schedule: form.maintenance_schedule,
+      }]);
       toast.success("Vehicle saved");
       setShowAddForm(false);
-      setForm({ name: "", model: "", plate_number: "", transmission: "Automatic", status: "available", insurance_expiry: "", maintenance_schedule: "" });
+      setForm({ name: "", model: "", plate_number: "", transmission_type: "automatic", status: "available", insurance_expiry: "", maintenance_schedule: "" });
     } catch {
       toast.error("Failed to save vehicle");
     }
@@ -83,9 +91,9 @@ export default function AdminVehicles() {
                     </div>
                     <div className="space-y-2">
                       <Label>Transmission</Label>
-                      <select className="flex h-9 w-full rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm" value={form.transmission} onChange={(e) => setForm({ ...form, transmission: e.target.value })}>
-                        <option>Automatic</option>
-                        <option>Manual</option>
+                      <select className="flex h-9 w-full rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm" value={form.transmission_type} onChange={(e) => setForm({ ...form, transmission_type: e.target.value })}>
+                        <option value="automatic">Automatic</option>
+                        <option value="manual">Manual</option>
                       </select>
                     </div>
                   </div>
@@ -132,7 +140,7 @@ export default function AdminVehicles() {
                           <h3 className="font-semibold text-primary">{vehicle.name}</h3>
                           <p className="text-sm text-gray-500">{vehicle.plate_number}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs">{vehicle.transmission}</Badge>
+                            <Badge variant="outline" className="text-xs">{vehicle.transmission_type}</Badge>
                             <Badge variant="outline" className="text-xs">{vehicle.model}</Badge>
                           </div>
                         </div>

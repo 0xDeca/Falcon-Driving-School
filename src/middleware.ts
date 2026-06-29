@@ -49,62 +49,53 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  const pathname = request.nextUrl.pathname;
+  const originalPath = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname;
   const subdomain = getSubdomain(hostname);
 
   // Allow API routes through
-  if (pathname.startsWith("/api")) {
+  if (originalPath.startsWith("/api")) {
     return NextResponse.next({ request });
   }
 
-  // =========================================================================
-  // NEW CODE INJECTED HERE: SUBDOMAIN URL REWRITES
-  // =========================================================================
-  // If a user hits admin.falcondrivingschool.ng/dashboard, 
-  // it translates internally to /admin/dashboard without changing the URL bar.
-  if (subdomain === "admin" && !pathname.startsWith("/admin")) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/admin${pathname}`;
-    return NextResponse.rewrite(url);
+  // Determine effective pathname after subdomain rewriting
+  let effectivePath = originalPath;
+  let needsRewrite = false;
+
+  if (subdomain === "admin" && !originalPath.startsWith("/admin")) {
+    effectivePath = `/admin${originalPath}`;
+    needsRewrite = true;
+  } else if (subdomain === "staff" && !originalPath.startsWith("/instructor")) {
+    effectivePath = `/instructor${originalPath}`;
+    needsRewrite = true;
   }
 
-  if (subdomain === "staff" && !pathname.startsWith("/instructor")) {
-    const url = request.nextUrl.clone();
-    // Assuming your staff dashboard folder is named /instructor based on your rules below
-    url.pathname = `/instructor${pathname}`;
-    return NextResponse.rewrite(url);
-  }
-  // =========================================================================
-
-  // Subdomain-based isolation (when user has a custom domain)
+  // Subdomain-based isolation
   if (subdomain === "staff") {
-    if (pathname.startsWith("/admin") || pathname.startsWith("/student") || pathname === "/auth/admin-login" || pathname === "/auth/register") {
+    if (originalPath.startsWith("/admin") || originalPath.startsWith("/student") || originalPath === "/auth/admin-login" || originalPath === "/auth/register") {
       return rewrite404(request);
     }
   }
 
   if (subdomain === "admin") {
-    if (pathname.startsWith("/instructor") || pathname.startsWith("/student") || pathname === "/auth/register") {
+    if (originalPath.startsWith("/instructor") || originalPath.startsWith("/student") || originalPath === "/auth/register") {
       return rewrite404(request);
     }
   }
 
-  // Protected routes
+  // Protected routes check
   const isProtectedRoute =
-    pathname.startsWith("/student") ||
-    pathname.startsWith("/instructor") ||
-    pathname.startsWith("/admin");
+    effectivePath.startsWith("/student") ||
+    effectivePath.startsWith("/instructor") ||
+    effectivePath.startsWith("/admin");
 
-  const isAuthRoute = pathname.startsWith("/auth") && !pathname.startsWith("/auth/admin-login");
-  const isAdminAuthRoute = pathname.startsWith("/auth/admin-login");
+  const isAuthRoute = effectivePath.startsWith("/auth") && !effectivePath.startsWith("/auth/admin-login");
+  const isAdminAuthRoute = effectivePath.startsWith("/auth/admin-login");
 
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();
-    if (pathname.startsWith("/admin")) {
+    if (effectivePath.startsWith("/admin")) {
       url.pathname = "/auth/admin-login";
-    } else if (subdomain === "staff") {
-      url.pathname = "/auth/login";
     } else {
       url.pathname = "/auth/login";
     }
@@ -147,29 +138,47 @@ export async function middleware(request: NextRequest) {
   if (user && isProtectedRoute) {
     const { data: roleData } = await supabase
       .from("users")
-      .select("role")
+      .select("role, suspended")
       .eq("id", user.id)
       .single();
 
+    if (roleData?.suspended) {
+      await supabase.auth.signOut();
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      return NextResponse.redirect(url);
+    }
+
     const role = roleData?.role;
 
-    if (pathname.startsWith("/admin") && role !== "admin") {
+    if (effectivePath.startsWith("/admin") && role !== "admin") {
       const url = request.nextUrl.clone();
       url.pathname = `/${role}/dashboard`;
       return NextResponse.redirect(url);
     }
 
-    if (pathname.startsWith("/instructor") && role !== "instructor") {
+    if (effectivePath.startsWith("/instructor") && role !== "instructor") {
       const url = request.nextUrl.clone();
       url.pathname = `/${role}/dashboard`;
       return NextResponse.redirect(url);
     }
 
-    if (pathname.startsWith("/student") && role !== "student") {
+    if (effectivePath.startsWith("/student") && role !== "student") {
       const url = request.nextUrl.clone();
       url.pathname = `/${role}/dashboard`;
       return NextResponse.redirect(url);
     }
+  }
+
+  // Apply subdomain rewrite if needed (after all auth checks pass)
+  if (needsRewrite) {
+    const url = request.nextUrl.clone();
+    if (subdomain === "admin") {
+      url.pathname = `/admin${originalPath}`;
+    } else if (subdomain === "staff") {
+      url.pathname = `/instructor${originalPath}`;
+    }
+    return NextResponse.rewrite(url);
   }
 
   return supabaseResponse;

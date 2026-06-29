@@ -8,7 +8,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT UNIQUE NOT NULL,
+  name TEXT,
   role TEXT NOT NULL CHECK (role IN ('student', 'instructor', 'admin')) DEFAULT 'student',
+  suspended BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -167,6 +169,24 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Settings
+CREATE TABLE IF NOT EXISTS settings (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  school_name TEXT DEFAULT 'Falcon Driving School',
+  email TEXT DEFAULT 'info@falcondrivingschool.com',
+  phone TEXT DEFAULT '0800 000 0000',
+  address TEXT DEFAULT '123 Ibrahim Babangida Way, Abuja, Nigeria',
+  currency TEXT DEFAULT 'NGN',
+  lesson_reminder_hours TEXT DEFAULT '24',
+  cancellation_notice TEXT DEFAULT '24',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins can manage settings" ON settings
+  FOR ALL USING (public.is_admin());
+
 -- Coupons / Discounts
 CREATE TABLE IF NOT EXISTS coupons (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -201,6 +221,7 @@ CREATE POLICY "Admins can view contact messages" ON contact_messages
 
 -- Indexes for performance
 CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_suspended ON users(suspended);
 CREATE INDEX idx_students_user_id ON students(user_id);
 CREATE INDEX idx_instructors_user_id ON instructors(user_id);
 CREATE INDEX idx_enrollments_student_id ON enrollments(student_id);
@@ -248,7 +269,7 @@ CREATE POLICY "Users can view own record" ON users
 CREATE POLICY "Users can insert own record" ON users
   FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update own record" ON users
-  FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+  FOR UPDATE USING (auth.uid() = id AND suspended = FALSE) WITH CHECK (auth.uid() = id AND suspended = FALSE);
 CREATE POLICY "Admins can manage all users" ON users
   FOR ALL USING (public.is_admin());
 

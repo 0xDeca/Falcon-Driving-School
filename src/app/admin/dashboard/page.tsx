@@ -198,7 +198,7 @@ export default function AdminDashboard() {
                             </div>
                           </td>
                           <td className="py-3.5 px-6 font-semibold text-primary">{formatCurrency(payment.amount)}</td>
-                          <td className="py-3.5 px-6 text-gray-500">{payment.method || "—"}</td>
+                          <td className="py-3.5 px-6 text-gray-500">{payment.payment_method || "—"}</td>
                           <td className="py-3.5 px-6">
                             <Badge variant={payment.status === "completed" ? "success" : "warning"} className="text-xs">
                               {payment.status}

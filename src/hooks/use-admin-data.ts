@@ -56,38 +56,38 @@ export function useAdminStudents() {
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("students")
-        .select("*, users(*), enrollments(*, courses(*))")
-        .order("enrollment_date", { ascending: false });
-      setStudents(data ?? []);
-      setLoading(false);
-    };
-    fetch();
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("students")
+      .select("*, users(*), enrollments(*, courses(*))")
+      .order("enrollment_date", { ascending: false });
+    setStudents(data ?? []);
+    setLoading(false);
   }, []);
 
-  return { students, loading };
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { students, loading, refetch: fetch };
 }
 
 export function useAdminInstructors() {
   const [instructors, setInstructors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("instructors")
-        .select("*, users(*)")
-        .order("created_at", { ascending: false });
-      setInstructors(data ?? []);
-      setLoading(false);
-    };
-    fetch();
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("instructors")
+      .select("*, users(*)")
+      .order("created_at", { ascending: false });
+    setInstructors(data ?? []);
+    setLoading(false);
   }, []);
 
-  return { instructors, loading };
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { instructors, loading, refetch: fetch };
 }
 
 export function useAdminCourses() {

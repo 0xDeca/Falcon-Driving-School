@@ -62,13 +62,13 @@ export default function InstructorDashboard() {
         const lessons = allLessons || [];
 
         // Count distinct students
-        const studentMap = new Map();
+          const studentMap = new Map();
         lessons.forEach((l: any) => {
           const sid = l.enrollments?.student_id;
           if (sid && !studentMap.has(sid)) {
             studentMap.set(sid, {
               id: sid,
-              name: l.enrollments?.students?.users?.email ?? "Unknown",
+              name: l.enrollments?.students?.users?.name ?? l.enrollments?.students?.users?.email?.split("@")[0] ?? "Unknown",
               course: l.enrollments?.courses?.name ?? "Unknown",
               email: l.enrollments?.students?.users?.email ?? "",
             });
@@ -110,7 +110,7 @@ export default function InstructorDashboard() {
           today.map((l: any) => ({
             id: l.id,
             time: new Date(l.scheduled_date).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" }),
-            student: l.enrollments?.students?.users?.name ?? l.enrollments?.students?.users?.email ?? "Student",
+            student: l.enrollments?.students?.users?.name ?? l.enrollments?.students?.users?.email?.split("@")[0] ?? "Student",
             topic: l.enrollments?.courses?.name ?? "Driving Lesson",
             status: l.attendance_status,
           }))
@@ -119,7 +119,7 @@ export default function InstructorDashboard() {
         setPendingEvals(
           pending.slice(0, 5).map((l: any) => ({
             id: l.id,
-            student: l.enrollments?.students?.users?.name ?? l.enrollments?.students?.users?.email ?? "Student",
+            student: l.enrollments?.students?.users?.name ?? l.enrollments?.students?.users?.email?.split("@")[0] ?? "Student",
             date: l.scheduled_date,
             topic: l.enrollments?.courses?.name ?? "Driving Lesson",
           }))

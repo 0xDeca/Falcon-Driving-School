@@ -14,7 +14,7 @@ import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 
 export default function AdminInstructors() {
-  const { instructors, loading } = useAdminInstructors();
+  const { instructors, loading, refetch } = useAdminInstructors();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -22,7 +22,8 @@ export default function AdminInstructors() {
   const [editForm, setEditForm] = useState<any>({});
 
   const filtered = instructors.filter((i: any) =>
-    (i.users?.email ?? "").toLowerCase().includes(search.toLowerCase())
+    (i.users?.email ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (i.users?.name ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   const createInstructor = async () => {
@@ -30,7 +31,7 @@ export default function AdminInstructors() {
       const res = await fetch("/api/admin/create-user", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: addForm.email, password: addForm.password, role: "instructor",
+          email: addForm.email, password: addForm.password, name: addForm.name, role: "instructor",
           certification: addForm.certification, years_experience: parseInt(addForm.experience) || 0, bio: addForm.bio,
         }),
       });
@@ -39,6 +40,7 @@ export default function AdminInstructors() {
       toast.success("Instructor created");
       setShowAdd(false);
       setAddForm({ name: "", email: "", password: "", certification: "", experience: "", bio: "" });
+      refetch();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -47,6 +49,7 @@ export default function AdminInstructors() {
   const startEdit = (inst: any) => {
     setEditing(inst.id);
     setEditForm({
+      name: inst.users?.name ?? "",
       certification: inst.certification ?? "",
       years_experience: inst.years_experience ?? 0,
       bio: inst.bio ?? "",
@@ -56,6 +59,10 @@ export default function AdminInstructors() {
   const saveEdit = async () => {
     if (!editing) return;
     try {
+      const inst = instructors.find((i: any) => i.id === editing);
+      if (inst?.user_id) {
+        await supabase.from("users").update({ name: editForm.name }).eq("id", inst.user_id);
+      }
       const { error } = await supabase.from("instructors").update({
         certification: editForm.certification,
         years_experience: parseInt(editForm.years_experience) || 0,
@@ -64,16 +71,30 @@ export default function AdminInstructors() {
       if (error) throw error;
       toast.success("Instructor updated");
       setEditing(null);
+      refetch();
     } catch { toast.error("Failed to update"); }
   };
 
-  const deleteInstructor = async (id: string) => {
-    if (!confirm("Delete this instructor permanently?")) return;
+  const toggleSuspend = async (userId: string, currentlySuspended: boolean) => {
     try {
-      const { error } = await supabase.from("instructors").delete().eq("id", id);
+      const { error } = await supabase
+        .from("users")
+        .update({ suspended: !currentlySuspended })
+        .eq("id", userId);
       if (error) throw error;
-      toast.success("Instructor deleted");
-    } catch { toast.error("Failed to delete"); }
+      toast.success(currentlySuspended ? "Instructor restored" : "Instructor suspended");
+      refetch();
+    } catch { toast.error("Failed to update status"); }
+  };
+
+  const deleteInstructor = async (instructorId: string, userId: string) => {
+    if (!confirm("Delete this instructor permanently? This action cannot be undone.")) return;
+    try {
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      if (authError) throw authError;
+      toast.success("Instructor deleted permanently");
+      refetch();
+    } catch { toast.error("Failed to delete instructor"); }
   };
 
   if (loading) {
@@ -108,19 +129,25 @@ export default function AdminInstructors() {
               <CardContent className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} />
+                    <Label>Full Name</Label>
+                    <Input value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Password</Label>
-                    <Input type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} />
+                    <Label>Email</Label>
+                    <Input type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} />
                   </div>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
+                    <Label>Password</Label>
+                    <Input type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
                     <Label>Certification</Label>
                     <Input placeholder="e.g. Certified Driving Instructor" value={addForm.certification} onChange={(e) => setAddForm({ ...addForm, certification: e.target.value })} />
                   </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Years Experience</Label>
                     <Input type="number" value={addForm.experience} onChange={(e) => setAddForm({ ...addForm, experience: e.target.value })} />
@@ -142,7 +169,7 @@ export default function AdminInstructors() {
 
           <div className="relative w-full lg:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input placeholder="Search by email..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input placeholder="Search by name or email..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -150,15 +177,19 @@ export default function AdminInstructors() {
               <div className="col-span-2 text-center text-gray-400 py-8">No instructors found</div>
             ) : (
               filtered.map((inst: any) => (
-                <Card key={inst.id}>
+                <Card key={inst.id} className={inst.users?.suspended ? "border-red-200 bg-red-50/30" : ""}>
                   {editing === inst.id ? (
                     <CardContent className="p-6 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold">Editing: {inst.users?.email}</h3>
+                        <h3 className="font-semibold">Editing: {inst.users?.name ?? inst.users?.email}</h3>
                         <div className="flex gap-2">
                           <Button size="sm" variant="gold" onClick={saveEdit}><Save className="mr-1 h-3 w-3" /> Save</Button>
                           <Button size="sm" variant="outline" onClick={() => setEditing(null)}><X className="mr-1 h-3 w-3" /></Button>
                         </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Full Name</Label>
+                        <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
                       </div>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -181,14 +212,18 @@ export default function AdminInstructors() {
                         <div className="flex items-start gap-4">
                           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
                             <span className="font-bold text-accent text-sm">
-                              {(inst.users?.email?.[0] ?? "?").toUpperCase()}
+                              {((inst.users?.name ?? inst.users?.email)?.[0] ?? "?").toUpperCase()}
                             </span>
                           </div>
                           <div>
-                            <h3 className="font-semibold text-primary">{inst.users?.email ?? "Unknown"}</h3>
+                            <h3 className="font-semibold text-primary">{inst.users?.name ?? inst.users?.email ?? "Unknown"}</h3>
+                            <p className="text-sm text-gray-500">{inst.users?.email}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="secondary" className="text-xs">{inst.certification || "Certified"}</Badge>
                               <Badge variant="outline" className="text-xs">{inst.years_experience || 0}yrs</Badge>
+                              {inst.users?.suspended && (
+                                <Badge variant="destructive" className="text-xs">Suspended</Badge>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -203,7 +238,13 @@ export default function AdminInstructors() {
                           <Button variant="outline" size="sm" onClick={() => startEdit(inst)}>
                             <Save className="mr-1 h-3 w-3" /> Edit
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => deleteInstructor(inst.id)}>
+                          <Button variant="outline" size="sm" onClick={() => toggleSuspend(inst.user_id, inst.users?.suspended)}>
+                            {inst.users?.suspended
+                              ? <CheckCircle className="mr-1 h-3 w-3 text-green-600" />
+                              : <Ban className="mr-1 h-3 w-3 text-red-500" />}
+                            {inst.users?.suspended ? "Restore" : "Suspend"}
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => deleteInstructor(inst.id, inst.user_id)}>
                             <Trash2 className="mr-1 h-3 w-3 text-red-500" /> Delete
                           </Button>
                         </div>

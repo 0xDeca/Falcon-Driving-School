@@ -41,7 +41,7 @@ export default function InstructorStudents() {
             const studentData = l.enrollments?.students;
             studentMap.set(sid, {
               id: sid,
-              name: studentData?.users?.email ?? "Unknown",
+              name: studentData?.users?.name ?? studentData?.users?.email?.split("@")[0] ?? "Unknown",
               email: studentData?.users?.email ?? "",
               phone: studentData?.phone ?? "",
               course: l.enrollments?.courses?.name ?? "Unknown",

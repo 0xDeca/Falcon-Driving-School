@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     const userId = authUser.user.id;
 
-    const { error: userError } = await adminClient.from("users").insert({ id: userId, email, role });
+    const { error: userError } = await adminClient.from("users").insert({ id: userId, email, name: name || null, role });
     if (userError) throw userError;
 
     if (role === "student") {

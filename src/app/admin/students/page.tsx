@@ -7,13 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Search, UserPlus, Download, Save, X, Ban, CheckCircle, Loader2 } from "lucide-react";
+import { Search, UserPlus, Download, Save, X, Ban, CheckCircle, Trash2, Loader2 } from "lucide-react";
 import { useAdminStudents } from "@/hooks/use-admin-data";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 
 export default function AdminStudents() {
-  const { students, loading } = useAdminStudents();
+  const { students, loading, refetch } = useAdminStudents();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -21,7 +21,8 @@ export default function AdminStudents() {
   const [editForm, setEditForm] = useState<any>({});
 
   const filtered = students.filter((s: any) =>
-    (s.users?.email ?? "").toLowerCase().includes(search.toLowerCase())
+    (s.users?.email ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (s.users?.name ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   const createStudent = async () => {
@@ -35,6 +36,7 @@ export default function AdminStudents() {
       toast.success("Student created");
       setShowAdd(false);
       setAddForm({ name: "", email: "", password: "", phone: "" });
+      refetch();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -43,6 +45,7 @@ export default function AdminStudents() {
   const startEdit = (s: any) => {
     setEditing(s.id);
     setEditForm({
+      name: s.users?.name ?? "",
       email: s.users?.email ?? "",
       phone: s.phone ?? "",
       enrollment_status: s.enrollments?.[0]?.status ?? "active",
@@ -52,6 +55,10 @@ export default function AdminStudents() {
   const saveEdit = async () => {
     if (!editing) return;
     try {
+      const student = students.find((s: any) => s.id === editing);
+      if (student?.user_id) {
+        await supabase.from("users").update({ name: editForm.name }).eq("id", student.user_id);
+      }
       await supabase.from("students").update({ phone: editForm.phone }).eq("id", editing);
       if (editForm.enrollment_status) {
         const enrollmentId = students.find((s: any) => s.id === editing)?.enrollments?.[0]?.id;
@@ -61,18 +68,30 @@ export default function AdminStudents() {
       }
       toast.success("Student updated");
       setEditing(null);
+      refetch();
     } catch { toast.error("Failed to update"); }
   };
 
-  const toggleSuspend = async (studentId: string, currentStatus: string) => {
-    const newStatus = currentStatus === "cancelled" ? "active" : "cancelled";
+  const toggleSuspend = async (studentId: string, userId: string, currentlySuspended: boolean) => {
     try {
-      const enrollment = students.find((s: any) => s.id === studentId)?.enrollments?.[0];
-      if (enrollment) {
-        await supabase.from("enrollments").update({ status: newStatus }).eq("id", enrollment.id);
-      }
-      toast.success(newStatus === "active" ? "Student restored" : "Student suspended");
+      const { error } = await supabase
+        .from("users")
+        .update({ suspended: !currentlySuspended })
+        .eq("id", userId);
+      if (error) throw error;
+      toast.success(currentlySuspended ? "Student restored" : "Student suspended");
+      refetch();
     } catch { toast.error("Failed to update status"); }
+  };
+
+  const deleteStudent = async (studentId: string, userId: string) => {
+    if (!confirm("Delete this student permanently? This action cannot be undone.")) return;
+    try {
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      if (authError) throw authError;
+      toast.success("Student deleted permanently");
+      refetch();
+    } catch { toast.error("Failed to delete student"); }
   };
 
   if (loading) {
@@ -99,7 +118,7 @@ export default function AdminStudents() {
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => {
                 const csv = "Name,Email,Phone,Status\n" + students.map((s: any) =>
-                  `${s.users?.email?.split("@")[0] ?? ""},${s.users?.email ?? ""},${s.phone ?? ""},${s.enrollments?.[0]?.status ?? "active"}`
+                  `${s.users?.name ?? s.users?.email?.split("@")[0] ?? ""},${s.users?.email ?? ""},${s.phone ?? ""},${s.users?.suspended ? "suspended" : s.enrollments?.[0]?.status ?? "active"}`
                 ).join("\n");
                 const blob = new Blob([csv], { type: "text/csv" });
                 const a = document.createElement("a");
@@ -153,13 +172,14 @@ export default function AdminStudents() {
             <div className="p-4 border-b">
               <div className="relative w-full lg:w-96">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search by email..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Input placeholder="Search by name or email..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
             </div>
             <CardContent className="p-0">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="text-left py-3 px-4 text-gray-600 font-medium">Name</th>
                     <th className="text-left py-3 px-4 text-gray-600 font-medium">Email</th>
                     <th className="text-left py-3 px-4 text-gray-600 font-medium">Phone</th>
                     <th className="text-left py-3 px-4 text-gray-600 font-medium">Course</th>
@@ -170,12 +190,15 @@ export default function AdminStudents() {
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={6} className="py-8 text-center text-gray-400">No students found</td></tr>
+                    <tr><td colSpan={7} className="py-8 text-center text-gray-400">No students found</td></tr>
                   ) : (
                     filtered.map((s: any) => (
-                      <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={s.id} className={`border-b border-gray-100 hover:bg-gray-50 ${s.users?.suspended ? "bg-red-50/50" : ""}`}>
                         {editing === s.id ? (
                           <>
+                            <td className="py-3 px-4">
+                              <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+                            </td>
                             <td className="py-3 px-4">
                               <Input value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
                             </td>
@@ -204,14 +227,19 @@ export default function AdminStudents() {
                           </>
                         ) : (
                           <>
-                            <td className="py-3 px-4">{s.users?.email ?? "N/A"}</td>
+                            <td className="py-3 px-4 font-medium">{s.users?.name ?? s.users?.email?.split("@")[0] ?? "N/A"}</td>
+                            <td className="py-3 px-4 text-gray-600">{s.users?.email ?? "N/A"}</td>
                             <td className="py-3 px-4 text-gray-600">{s.phone ?? "—"}</td>
                             <td className="py-3 px-4 text-gray-600">{s.enrollments?.[0]?.courses?.name ?? "—"}</td>
                             <td className="py-3 px-4 text-gray-600">{s.enrollment_date ?? "—"}</td>
                             <td className="py-3 px-4">
-                              <Badge variant={s.enrollments?.[0]?.status === "active" ? "success" : "destructive"}>
-                                {s.enrollments?.[0]?.status ?? "active"}
-                              </Badge>
+                              {s.users?.suspended ? (
+                                <Badge variant="destructive">Suspended</Badge>
+                              ) : (
+                                <Badge variant={s.enrollments?.[0]?.status === "active" ? "success" : "secondary"}>
+                                  {s.enrollments?.[0]?.status ?? "active"}
+                                </Badge>
+                              )}
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex gap-1">
@@ -219,10 +247,14 @@ export default function AdminStudents() {
                                   <Save className="h-4 w-4 text-blue-600" />
                                 </Button>
                                 <Button variant="ghost" size="icon" className="h-8 w-8"
-                                  onClick={() => toggleSuspend(s.id, s.enrollments?.[0]?.status ?? "active")}>
-                                  {s.enrollments?.[0]?.status === "cancelled"
+                                  onClick={() => toggleSuspend(s.id, s.user_id, s.users?.suspended)}>
+                                  {s.users?.suspended
                                     ? <CheckCircle className="h-4 w-4 text-green-600" />
                                     : <Ban className="h-4 w-4 text-red-500" />}
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8"
+                                  onClick={() => deleteStudent(s.id, s.user_id)}>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
                               </div>
                             </td>

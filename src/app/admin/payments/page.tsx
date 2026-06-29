@@ -19,7 +19,7 @@ export default function AdminPayments() {
       try {
         const { data } = await supabase
           .from("payments")
-          .select("*, students!inner(user_id, phone, address, enrollment_date)")
+          .select("*, students!inner(*, users(*))")
           .order("created_at", { ascending: false });
         setTransactions(data ?? []);
       } catch { /* handled */ }
@@ -124,9 +124,9 @@ export default function AdminPayments() {
                     transactions.map((tx: any) => (
                       <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 text-xs font-mono text-gray-600">{tx.id.slice(0, 16)}...</td>
-                        <td className="py-3 px-4 font-medium text-primary">{tx.students?.user_id?.slice(0, 8) ?? "Unknown"}</td>
+                        <td className="py-3 px-4 font-medium text-primary">{tx.students?.users?.name ?? tx.students?.users?.email?.split("@")[0] ?? "Unknown"}</td>
                         <td className="py-3 px-4 font-bold">{formatCurrency(tx.amount)}</td>
-                        <td className="py-3 px-4 text-gray-600">{tx.method}</td>
+                        <td className="py-3 px-4 text-gray-600">{tx.payment_method}</td>
                         <td className="py-3 px-4">
                           <Badge variant={tx.status === "completed" ? "success" : tx.status === "pending" ? "warning" : "destructive"}>
                             {tx.status}
