@@ -1,22 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sidebar } from "@/components/layout/sidebar";
-import { User, Camera, Save, Loader2 } from "lucide-react";
+import { User, Camera, Save, Loader2, Upload } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 
 export default function StudentProfile() {
   const { user, profile, loading: userLoading, refresh } = useUser();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [profileData, setProfileData] = useState({
     phone: "",
     address: "",
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -24,8 +27,48 @@ export default function StudentProfile() {
         phone: (profile as any)?.phone || "",
         address: (profile as any)?.address || "",
       });
+      setPhotoUrl((profile as any)?.profile_photo_url || null);
     }
   }, [user, profile]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const filePath = `profiles/${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("student-files")
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("student-files")
+        .getPublicUrl(filePath);
+
+      const studentId = (profile as any)?.id;
+      if (studentId) {
+        const { error: updateError } = await supabase
+          .from("students")
+          .update({ profile_photo_url: publicUrl })
+          .eq("id", studentId);
+        if (updateError) throw updateError;
+      }
+
+      setPhotoUrl(publicUrl);
+      toast.success("Profile picture updated");
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload photo");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -74,12 +117,35 @@ export default function StudentProfile() {
             <CardContent className="p-8">
               <div className="flex flex-col items-center mb-8">
                 <div className="relative">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-accent/10">
-                    <User className="h-10 w-10 text-accent" />
-                  </div>
-                  <button className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-colors">
-                    <Camera className="h-4 w-4" />
+                  {photoUrl ? (
+                    <img
+                      src={photoUrl}
+                      alt="Profile"
+                      className="h-24 w-24 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-accent/10">
+                      <User className="h-10 w-10 text-accent" />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-colors"
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
                   </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                  />
                 </div>
                 <h2 className="mt-4 text-xl font-semibold text-primary">
                   {user?.email?.split("@")[0] || "Student"}

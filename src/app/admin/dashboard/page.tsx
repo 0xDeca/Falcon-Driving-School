@@ -16,6 +16,9 @@ import {
   ArrowDownRight,
   Search,
   Loader2,
+  Car,
+  BookOpen,
+  IdCard,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useAdminDashboard } from "@/hooks/use-admin-data";
@@ -24,8 +27,11 @@ const statCards = [
   { label: "Students", key: "totalStudents", icon: Users, change: "+12%", trend: "up" },
   { label: "Instructors", key: "activeInstructors", icon: UserCheck, change: "+3%", trend: "up" },
   { label: "Revenue", key: "totalRevenue", icon: DollarSign, change: "+8.2%", trend: "up", format: true },
+  { label: "Vehicles", key: "totalVehicles", icon: Car, sub: "availableVehicles", subLabel: "available" },
+  { label: "Courses", key: "totalCourses", icon: BookOpen },
   { label: "Lessons", key: "upcomingLessons", icon: Calendar, change: "+5%", trend: "up" },
-  { label: "Pending", key: "pendingCertificates", icon: Award, change: "-2%", trend: "down" },
+  { label: "Pending Certs", key: "pendingCertificates", icon: Award, change: "-2%", trend: "down" },
+  { label: "Driving Licenses", key: "pendingLicenses", icon: IdCard, change: "pending" },
 ];
 
 export default function AdminDashboard() {
@@ -93,12 +99,12 @@ export default function AdminDashboard() {
           <div className="max-w-7xl mx-auto space-y-8">
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {statCards.map((stat) => {
                 const Icon = stat.icon;
                 const rawValue = data[stat.key as keyof typeof data] as number;
                 const value = stat.format ? formatCurrency(rawValue) : rawValue;
-                const TrendIcon = stat.trend === "up" ? ArrowUpRight : ArrowDownRight;
+                const subValue = stat.sub ? (data[stat.sub as keyof typeof data] as number) : null;
                 return (
                   <div key={stat.key} className="bg-white rounded-xl p-5 border border-gray-100 flex items-center gap-4 relative">
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-50 shrink-0">
@@ -108,10 +114,17 @@ export default function AdminDashboard() {
                       <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{stat.label}</p>
                       <div className="flex items-baseline gap-2 mt-0.5">
                         <p className="text-xl font-bold text-primary">{value}</p>
-                        <span className={`flex items-center text-xs font-medium ${stat.trend === "up" ? "text-green-600" : "text-red-500"}`}>
-                          <TrendIcon className="h-3 w-3 mr-0.5" />
-                          {stat.change}
-                        </span>
+                        {subValue !== null && (
+                          <span className="text-xs text-gray-400">
+                            ({subValue} {stat.subLabel})
+                          </span>
+                        )}
+                        {stat.change && !stat.sub && (
+                          <span className={`flex items-center text-xs font-medium ${stat.trend === "up" ? "text-green-600" : "text-red-500"}`}>
+                            {stat.trend === "up" ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+                            {stat.change}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-8 rounded-full bg-accent" />

@@ -158,6 +158,18 @@ export interface Notification {
   created_at: string;
 }
 
+export interface DrivingLicense {
+  id: string;
+  student_id: string;
+  image_url: string;
+  status: "pending" | "verified" | "rejected";
+  admin_notes: string | null;
+  uploaded_at: string;
+  verified_at: string | null;
+  verified_by: string | null;
+  students?: Student;
+}
+
 export interface ContactMessage {
   id: string;
   name: string;

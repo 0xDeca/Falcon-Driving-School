@@ -33,6 +33,7 @@ const NAV_ITEMS = {
   student: [
     { label: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
     { label: "Profile", href: "/student/profile", icon: User },
+    { label: "Driving License", href: "/student/driving-license", icon: FileText },
     { label: "Lessons", href: "/student/lessons", icon: Calendar },
     { label: "Progress", href: "/student/progress", icon: BarChart3 },
     { label: "Payments", href: "/student/payments", icon: CreditCard },
@@ -52,6 +53,7 @@ const NAV_ITEMS = {
     { label: "Instructors", href: "/admin/instructors", icon: User },
     { label: "Courses", href: "/admin/courses", icon: BookOpen },
     { label: "Vehicles", href: "/admin/vehicles", icon: Car },
+    { label: "Driving Licenses", href: "/admin/driving-licenses", icon: FileText },
     { label: "Payments", href: "/admin/payments", icon: CreditCard },
     { label: "Certificates", href: "/admin/certificates", icon: Award },
     { label: "Assessments", href: "/admin/assessments", icon: BarChart3 },

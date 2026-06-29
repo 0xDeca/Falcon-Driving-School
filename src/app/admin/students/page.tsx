@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Sidebar } from "@/components/layout/sidebar";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Search, UserPlus, Download, Save, X, Ban, CheckCircle, Trash2, Loader2 } from "lucide-react";
 import { useAdminStudents } from "@/hooks/use-admin-data";
 import { supabase } from "@/lib/supabase";
@@ -17,6 +18,8 @@ export default function AdminStudents() {
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ studentId: string; userId: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [addForm, setAddForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [editForm, setEditForm] = useState<any>({});
 
@@ -84,14 +87,17 @@ export default function AdminStudents() {
     } catch { toast.error("Failed to update status"); }
   };
 
-  const deleteStudent = async (studentId: string, userId: string) => {
-    if (!confirm("Delete this student permanently? This action cannot be undone.")) return;
+  const deleteStudent = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
     try {
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      const { error: authError } = await supabase.auth.admin.deleteUser(deleteConfirm.userId);
       if (authError) throw authError;
       toast.success("Student deleted permanently");
+      setDeleteConfirm(null);
       refetch();
     } catch { toast.error("Failed to delete student"); }
+    finally { setDeleting(false); }
   };
 
   if (loading) {
@@ -253,7 +259,7 @@ export default function AdminStudents() {
                                     : <Ban className="h-4 w-4 text-red-500" />}
                                 </Button>
                                 <Button variant="ghost" size="icon" className="h-8 w-8"
-                                  onClick={() => deleteStudent(s.id, s.user_id)}>
+                                  onClick={() => setDeleteConfirm({ studentId: s.id, userId: s.user_id, name: s.users?.name || s.users?.email })}>
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
                               </div>
@@ -269,6 +275,17 @@ export default function AdminStudents() {
           </Card>
         </div>
       </div>
+
+      <ConfirmModal
+        open={!!deleteConfirm}
+        onClose={() => !deleting && setDeleteConfirm(null)}
+        onConfirm={deleteStudent}
+        title="Delete Student"
+        message={`Are you sure you want to delete "${deleteConfirm?.name}"? This will permanently remove their account, enrollments, payments, and all associated data. This action cannot be undone.`}
+        confirmLabel={deleting ? "Deleting..." : "Delete Permanently"}
+        variant="danger"
+        loading={deleting}
+      />
     </div>
   );
 }
