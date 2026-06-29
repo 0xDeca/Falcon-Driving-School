@@ -3,7 +3,9 @@ export type Role = "student" | "instructor" | "admin";
 export interface User {
   id: string;
   email: string;
+  name?: string;
   role: Role;
+  suspended?: boolean;
   created_at: string;
   updated_at: string;
 }

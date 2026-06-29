@@ -23,7 +23,7 @@ export function useAdminDashboard() {
         const [studentsRes, instructorsRes, paymentsRes, lessonsRes, certsRes] = await Promise.all([
           supabase.from("students").select("id", { count: "exact" }),
           supabase.from("instructors").select("id", { count: "exact" }),
-          supabase.from("payments").select("*").eq("status", "completed"),
+          supabase.from("payments").select("*, students!inner(*, users(*))").eq("status", "completed"),
           supabase.from("lessons").select("id", { count: "exact" }).gte("scheduled_date", new Date().toISOString()),
           supabase.from("certificate_recommendations").select("id", { count: "exact" }).eq("status", "pending"),
         ]);

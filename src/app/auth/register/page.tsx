@@ -61,13 +61,6 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const { data: dupPhone } = await supabase.from("students").select("id").eq("phone", formData.phone).maybeSingle();
-      if (dupPhone) {
-        setErrors({ phone: "Phone number already registered" });
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -82,20 +75,16 @@ export default function RegisterPage() {
       if (error) throw error;
 
       if (data.user) {
-        const { error: userError } = await supabase.from("users").insert({
-          id: data.user.id,
-          email: formData.email,
-          role: "student",
+        const res = await fetch("/api/auth/complete-signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: formData.phone }),
         });
 
-        if (userError) throw userError;
-
-        const { error: studentError } = await supabase.from("students").insert({
-          user_id: data.user.id,
-          phone: formData.phone,
-        });
-
-        if (studentError) throw studentError;
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Failed to complete registration");
+        }
       }
 
       toast.success(

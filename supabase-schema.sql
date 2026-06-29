@@ -387,6 +387,31 @@ INSERT INTO blog_categories (name, slug) VALUES
   ('Falcon Updates', 'falcon-updates')
 ON CONFLICT (slug) DO NOTHING;
 
+-- Auto-create public.users row on signup (bypasses RLS via SECURITY DEFINER)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.users (id, email, name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data ->> 'full_name',
+    'student'
+  );
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
 -- Insert default courses
 INSERT INTO courses (name, description, duration_hours, price, requirements) VALUES
   ('Automatic Driving Lessons', 'Master driving with automatic transmission vehicles.', 24, 150000, 'Must be 18 years or older. Valid learner''s permit required.'),

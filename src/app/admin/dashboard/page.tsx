@@ -192,9 +192,9 @@ export default function AdminDashboard() {
                             <td className="py-3.5 px-6">
                               <div className="flex items-center gap-3">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">
-                                  {(payment.students?.user_id?.[0] ?? "?").toUpperCase()}
+                                  {(payment.students?.users?.name?.charAt(0) ?? payment.students?.users?.email?.charAt(0) ?? "?").toUpperCase()}
                                 </div>
-                                <span className="font-medium text-primary">{payment.students?.user_id?.slice(0, 8) || `Student #${i + 1}`}</span>
+                                <span className="font-medium text-primary">{payment.students?.users?.name || payment.students?.users?.email?.split("@")[0] || `Student #${i + 1}`}</span>
                             </div>
                           </td>
                           <td className="py-3.5 px-6 font-semibold text-primary">{formatCurrency(payment.amount)}</td>

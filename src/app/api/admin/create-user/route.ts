@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getServiceSupabase } from "@/lib/supabase-server";
 
 export async function POST(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
     }
 
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email, password, and role are required" }, { status: 400 });
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+    const adminClient = getServiceSupabase();
 
     if (phone && role === "student") {
       const { data: existing } = await adminClient.from("students").select("id").eq("phone", phone).maybeSingle();
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     const userId = authUser.user.id;
 
-    const { error: userError } = await adminClient.from("users").insert({ id: userId, email, name: name || null, role });
+    const { error: userError } = await adminClient.from("users").upsert({ id: userId, email, name: name || null, role }, { onConflict: "id" });
     if (userError) throw userError;
 
     if (role === "student") {
