@@ -18,6 +18,7 @@ import {
   TrendingUp,
   AlertCircle,
   Loader2,
+  BookOpen,
 } from "lucide-react";
 import { formatDate, formatTime, formatCurrency } from "@/lib/utils";
 import { PROGRESS_METRICS } from "@/types";
@@ -125,6 +126,37 @@ export default function StudentDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-accent" />
+                My Courses
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {stats && (stats.enrollments?.length ?? 0) > 0 ? (
+                <div className="space-y-3">
+                  {stats.enrollments!.map((enr: any, i: number) => (
+                    <div key={enr?.id || i} className="flex items-center justify-between p-4 rounded-lg bg-gray-50">
+                      <div>
+                        <p className="font-medium text-primary">{enr?.courses?.name || "Course"}</p>
+                        <p className="text-sm text-gray-500">{enr?.courses?.duration_hours ?? 0}h &middot; ₦{Number(enr?.courses?.price || 0).toLocaleString()}</p>
+                      </div>
+                      <Badge variant={enr?.paid ? "success" : "warning"}>
+                        {enr?.paid ? "Paid" : "Not Paid"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400 text-center py-4">No courses assigned yet</p>
+              )}
+              <Link href="/student/payments">
+                <Button variant="outline" className="w-full mt-3">Make Payment</Button>
+              </Link>
+            </CardContent>
+          </Card>
 
           <div className="grid lg:grid-cols-2 gap-8">
             <Card>

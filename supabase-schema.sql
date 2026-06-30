@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS enrollments (
   course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
   enrollment_date DATE DEFAULT CURRENT_DATE,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
+  paid BOOLEAN DEFAULT false,
   UNIQUE(student_id, course_id)
 );
 

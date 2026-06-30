@@ -8,13 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Sidebar } from "@/components/layout/sidebar";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
-import { Search, UserPlus, Download, Save, X, Ban, CheckCircle, Trash2, Loader2 } from "lucide-react";
-import { useAdminStudents } from "@/hooks/use-admin-data";
+import { Search, UserPlus, Download, Save, X, Ban, CheckCircle, Trash2, Loader2, BookOpen } from "lucide-react";
+import { useAdminStudents, useAdminCourses } from "@/hooks/use-admin-data";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 
 export default function AdminStudents() {
   const { students, loading, refetch } = useAdminStudents();
+  const { courses } = useAdminCourses();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -22,6 +23,7 @@ export default function AdminStudents() {
   const [deleting, setDeleting] = useState(false);
   const [addForm, setAddForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [editForm, setEditForm] = useState<any>({});
+  const [assigning, setAssigning] = useState<{ studentId: string; courseId: string; paid: boolean } | null>(null);
 
   const filtered = students.filter((s: any) =>
     (s.users?.email ?? "").toLowerCase().includes(search.toLowerCase()) ||
@@ -85,6 +87,21 @@ export default function AdminStudents() {
       toast.success(currentlySuspended ? "Student restored" : "Student suspended");
       refetch();
     } catch { toast.error("Failed to update status"); }
+  };
+
+  const assignCourse = async (studentId: string) => {
+    if (!assigning) return;
+    try {
+      const { error } = await supabase.from("enrollments").upsert({
+        student_id: studentId, course_id: assigning.courseId, paid: assigning.paid,
+      }, { onConflict: "student_id,course_id" });
+      if (error) throw error;
+      toast.success("Course assigned");
+      setAssigning(null);
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to assign");
+    }
   };
 
   const deleteStudent = async () => {
@@ -189,6 +206,7 @@ export default function AdminStudents() {
                     <th className="text-left py-3 px-4 text-gray-600 font-medium">Email</th>
                     <th className="text-left py-3 px-4 text-gray-600 font-medium">Phone</th>
                     <th className="text-left py-3 px-4 text-gray-600 font-medium">Course</th>
+                    <th className="text-left py-3 px-4 text-gray-600 font-medium">Paid</th>
                     <th className="text-left py-3 px-4 text-gray-600 font-medium">Enrolled</th>
                     <th className="text-left py-3 px-4 text-gray-600 font-medium">Status</th>
                     <th className="text-left py-3 px-4"></th>
@@ -196,7 +214,7 @@ export default function AdminStudents() {
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-gray-400">No students found</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-gray-400">No students found</td></tr>
                   ) : (
                     filtered.map((s: any) => (
                       <tr key={s.id} className={`border-b border-gray-100 hover:bg-gray-50 ${s.users?.suspended ? "bg-red-50/50" : ""}`}>
@@ -236,7 +254,24 @@ export default function AdminStudents() {
                             <td className="py-3 px-4 font-medium">{s.users?.name ?? s.users?.email?.split("@")[0] ?? "N/A"}</td>
                             <td className="py-3 px-4 text-gray-600">{s.users?.email ?? "N/A"}</td>
                             <td className="py-3 px-4 text-gray-600">{s.phone ?? "—"}</td>
-                            <td className="py-3 px-4 text-gray-600">{s.enrollments?.[0]?.courses?.name ?? "—"}</td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-600">{s.enrollments?.[0]?.courses?.name ?? "—"}</span>
+                                <Button variant="ghost" size="sm" className="h-6 text-xs"
+                                  onClick={() => setAssigning({ studentId: s.id, courseId: s.enrollments?.[0]?.course_id ?? "", paid: s.enrollments?.[0]?.paid ?? false })}>
+                                  <BookOpen className="h-3 w-3 mr-1" /> Assign
+                                </Button>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              {s.enrollments?.[0] ? (
+                                <Badge variant={s.enrollments[0].paid ? "success" : "warning"}>
+                                  {s.enrollments[0].paid ? "Paid" : "Not Paid"}
+                                </Badge>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
                             <td className="py-3 px-4 text-gray-600">{s.enrollment_date ?? "—"}</td>
                             <td className="py-3 px-4">
                               {s.users?.suspended ? (
@@ -275,6 +310,49 @@ export default function AdminStudents() {
           </Card>
         </div>
       </div>
+
+      {assigning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setAssigning(null)} />
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <button onClick={() => setAssigning(null)} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600">
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="text-lg font-semibold text-primary mb-4">Assign Course</h3>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Course</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={assigning.courseId}
+                  onChange={(e) => setAssigning({ ...assigning, courseId: e.target.value })}
+                >
+                  <option value="">Select a course...</option>
+                  {courses.filter((c: any) => !c.archived).map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name} — ₦{Number(c.price).toLocaleString()}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="paid-check"
+                  className="h-4 w-4 rounded border-gray-300"
+                  checked={assigning.paid}
+                  onChange={(e) => setAssigning({ ...assigning, paid: e.target.checked })}
+                />
+                <Label htmlFor="paid-check" className="text-sm">Payment completed (Paid)</Label>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="gold" className="flex-1" onClick={() => assignCourse(assigning.studentId)} disabled={!assigning.courseId}>
+                  Save Assignment
+                </Button>
+                <Button variant="outline" onClick={() => setAssigning(null)}>Cancel</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         open={!!deleteConfirm}

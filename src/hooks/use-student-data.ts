@@ -14,6 +14,7 @@ interface DashboardStats {
   paymentStatus: string;
   certificateEligible: boolean;
   unreadNotifications: number;
+  enrollments: any[];
 }
 
 interface UpcomingLesson {
@@ -105,10 +106,11 @@ export function useStudentDashboard() {
           completedLessonsCount: completed.length,
           totalLessons,
           progress: Math.min(progress, 100),
-          instructorName: null, // Will need a lookup
+          instructorName: null,
           paymentStatus: hasOutstanding ? "pending" : "completed",
           certificateEligible: !hasPendingRec,
           unreadNotifications: notifs?.length ?? 0,
+          enrollments: enrollments ?? [],
         });
 
         setUpcomingLessons(
