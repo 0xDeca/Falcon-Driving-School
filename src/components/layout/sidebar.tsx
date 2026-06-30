@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -69,6 +69,10 @@ export function Sidebar({ role }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const items = NAV_ITEMS[role];
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/");
@@ -76,11 +80,20 @@ export function Sidebar({ role }: SidebarProps) {
 
   const sidebarContent = (
     <div className="flex h-full flex-col bg-primary">
-      <div className="flex h-16 items-center gap-2 px-6 border-b border-white/10">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent">
-          <span className="text-sm font-bold text-primary">F</span>
+      <div className="flex h-16 items-center justify-between px-6 border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent">
+            <span className="text-sm font-bold text-primary">F</span>
+          </div>
+          <span className="font-semibold text-white">Falcon School</span>
         </div>
-        <span className="font-semibold text-white">Falcon School</span>
+        <button
+          className="lg:hidden flex h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close menu"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
@@ -92,14 +105,14 @@ export function Sidebar({ role }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-accent text-primary"
                   : "text-gray-300 hover:bg-white/10 hover:text-white"
               )}
               onClick={() => setMobileOpen(false)}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 shrink-0" />
               {item.label}
             </Link>
           );
@@ -122,7 +135,12 @@ export function Sidebar({ role }: SidebarProps) {
   return (
     <>
       <button
-        className="lg:hidden fixed top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white"
+        className={cn(
+          "lg:hidden fixed z-50 flex h-10 w-10 items-center justify-center rounded-xl shadow-lg transition-all duration-200",
+          mobileOpen
+            ? "top-4 left-[270px] bg-white text-primary"
+            : "top-4 left-4 bg-primary text-white"
+        )}
         onClick={() => setMobileOpen(!mobileOpen)}
         aria-expanded={mobileOpen}
         aria-label={mobileOpen ? "Close menu" : "Open menu"}
@@ -132,14 +150,14 @@ export function Sidebar({ role }: SidebarProps) {
 
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden animate-fade-in"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 lg:relative lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 w-64 transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
