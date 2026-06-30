@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Settings, Save, Bell, Shield, DollarSign, Loader2 } from "lucide-react";
+import { Settings, Save, Bell, Shield, DollarSign, Loader2, Database } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 
@@ -19,6 +19,28 @@ const DEFAULT_SETTINGS = {
   lesson_reminder_hours: "24",
   cancellation_notice: "24",
 };
+
+function SeedDataButton() {
+  const [seeding, setSeeding] = useState(false);
+  const handleSeed = async () => {
+    setSeeding(true);
+    try {
+      const res = await fetch("/api/admin/seed-data", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Seed failed");
+      toast.success(`Seeded ${json.created?.courses ?? 0} courses, ${json.created?.vehicles ?? 0} vehicles`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSeeding(false);
+    }
+  };
+  return (
+    <Button variant="outline" onClick={handleSeed} disabled={seeding}>
+      <Database className="mr-2 h-4 w-4" /> {seeding ? "Seeding..." : "Seed Courses & Vehicles"}
+    </Button>
+  );
+}
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -144,6 +166,19 @@ export default function AdminSettings() {
           <Button variant="gold" size="lg" className="w-full" onClick={handleSave} disabled={saving}>
             <Save className="mr-2 h-4 w-4" /> {saving ? "Saving..." : "Save All Settings"}
           </Button>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Database className="h-5 w-5 text-accent" />
+                Data Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-500">Populate courses and vehicles from the landing page data. This is safe to re-run &mdash; existing data won&apos;t be duplicated.</p>
+              <SeedDataButton />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
