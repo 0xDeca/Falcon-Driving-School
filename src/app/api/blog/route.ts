@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSupabase } from "@/lib/supabase-server";
+import { getServiceSupabase, getServerSupabase } from "@/lib/supabase-server";
 
 export async function GET() {
   try {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid slug format" }, { status: 400 });
     }
 
-    const supabase = getServerSupabase();
+    const supabase = getServiceSupabase();
 
     const postData: any = {
       title,
@@ -72,7 +72,7 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const { id, ...updateData } = body;
 
-    const supabase = getServerSupabase();
+    const supabase = getServiceSupabase();
 
     if (updateData.status === "published") {
       updateData.published_at = new Date().toISOString();
@@ -97,7 +97,7 @@ export async function DELETE(request: Request) {
   try {
     const { id } = await request.json();
 
-    const supabase = getServerSupabase();
+    const supabase = getServiceSupabase();
 
     const { error } = await supabase
       .from("blog_posts")

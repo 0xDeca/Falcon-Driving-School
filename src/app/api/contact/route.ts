@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSupabase } from "@/lib/supabase-server";
+import { getServiceSupabase } from "@/lib/supabase-server";
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid message" }, { status: 400 });
     }
 
-    const supabase = getServerSupabase();
+    const supabase = getServiceSupabase();
     const { error } = await supabase
       .from("contact_messages")
       .insert([{ name, email, phone, message }]);

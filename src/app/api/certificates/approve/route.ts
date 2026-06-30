@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
-import { getServerSupabase } from "@/lib/supabase-server";
+import { getServiceSupabase } from "@/lib/supabase-server";
 
 export async function POST(request: Request) {
   try {
     const { recommendationId, adminComment } = await request.json();
 
-    const supabase = getServerSupabase();
+    const supabase = getServiceSupabase();
 
-    // Get the recommendation
     const { data: rec, error: recError } = await supabase
       .from("certificate_recommendations")
-      .select("*, students(*), courses(*)")
+      .select("*, students!inner(*)")
       .eq("id", recommendationId)
       .single();
 
@@ -18,7 +17,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Recommendation not found" }, { status: 404 });
     }
 
-    // Update recommendation status to approved
     const { error: updateError } = await supabase
       .from("certificate_recommendations")
       .update({ 
@@ -29,21 +27,29 @@ export async function POST(request: Request) {
 
     if (updateError) throw updateError;
 
-    // Create the certificate
+    const { data: enrollment } = await supabase
+      .from("enrollments")
+      .select("course_id")
+      .eq("student_id", rec.student_id)
+      .order("enrollment_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const courseId = enrollment?.course_id;
+
     const certNumber = `FDS-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    
+
     const { error: certError } = await supabase
       .from("certificates")
       .insert([{
         student_id: rec.student_id,
-        course_id: rec.students?.course_id,
+        course_id: courseId,
         certificate_number: certNumber,
         completion_date: new Date().toISOString().split("T")[0],
       }]);
 
     if (certError) throw certError;
 
-    // Create notification for student
     const { data: student } = await supabase
       .from("students")
       .select("user_id")

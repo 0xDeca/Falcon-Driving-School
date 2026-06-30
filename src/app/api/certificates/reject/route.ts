@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSupabase } from "@/lib/supabase-server";
+import { getServiceSupabase } from "@/lib/supabase-server";
 
 export async function POST(request: Request) {
   try {
     const { recommendationId, adminComment } = await request.json();
 
-    const supabase = getServerSupabase();
+    const supabase = getServiceSupabase();
 
     const { error } = await supabase
       .from("certificate_recommendations")

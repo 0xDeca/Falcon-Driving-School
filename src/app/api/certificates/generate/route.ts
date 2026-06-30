@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { getServerSupabase } from "@/lib/supabase-server";
+import { getServiceSupabase } from "@/lib/supabase-server";
 
 export async function POST(request: Request) {
   try {
     const { certificateId } = await request.json();
 
-    const supabase = getServerSupabase();
+    const supabase = getServiceSupabase();
     const { data: certificate, error } = await supabase
       .from("certificates")
-      .select("*, students!inner(*, users(*)), courses(*), instructors!inner(*, users(*))")
+      .select("*, students!inner(*, users(*)), courses(*)")
       .eq("id", certificateId)
       .single();
 
@@ -16,11 +16,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
     }
 
-    // Generate certificate number if not exists
     const certNumber = certificate.certificate_number || 
       `FDS-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-    // Update certificate with generated number
     if (!certificate.certificate_number) {
       await supabase
         .from("certificates")
@@ -28,7 +26,6 @@ export async function POST(request: Request) {
         .eq("id", certificateId);
     }
 
-    // Return the data needed for client-side PDF generation
     return NextResponse.json({
       studentName: certificate.students?.users?.email?.split("@")[0] || "Student",
       courseName: certificate.courses?.name || "Course",

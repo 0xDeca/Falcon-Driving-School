@@ -159,6 +159,18 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can view published posts" ON blog_posts
+  FOR SELECT USING (status = 'published');
+CREATE POLICY "Admins can manage blog posts" ON blog_posts
+  FOR ALL USING (public.is_admin());
+
+ALTER TABLE blog_categories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can view categories" ON blog_categories
+  FOR SELECT USING (true);
+CREATE POLICY "Admins can manage categories" ON blog_categories
+  FOR ALL USING (public.is_admin());
+
 -- Notifications
 CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

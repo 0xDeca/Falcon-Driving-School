@@ -19,14 +19,14 @@ export default function StudentDrivingLicense() {
 
   const fetchLicense = useCallback(async () => {
     const studentId = (profile as any)?.id;
-    if (!studentId) return;
+    if (!studentId) { setLoading(false); return; }
     const { data } = await supabase
       .from("driving_licenses")
       .select("*")
       .eq("student_id", studentId)
       .order("uploaded_at", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
     if (data) setLicense(data);
     setLoading(false);
   }, [profile]);
