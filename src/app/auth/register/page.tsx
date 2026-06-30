@@ -78,7 +78,7 @@ export default function RegisterPage() {
         const res = await fetch("/api/auth/complete-signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: formData.phone }),
+          body: JSON.stringify({ phone: formData.phone, userId: data.user.id }),
         });
 
         if (!res.ok) {
