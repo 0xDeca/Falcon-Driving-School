@@ -15,6 +15,7 @@ interface DashboardStats {
   certificateEligible: boolean;
   unreadNotifications: number;
   enrollments: any[];
+  registration: any;
 }
 
 interface UpcomingLesson {
@@ -97,6 +98,12 @@ export function useStudentDashboard() {
           (r: { status: string }) => r.status === "pending"
         );
 
+        const { data: registration } = await supabase
+          .from("student_registrations")
+          .select("*")
+          .eq("student_id", studentId)
+          .maybeSingle();
+
         const progress = totalLessons > 0 
           ? Math.round((completed.length / totalLessons) * 100) 
           : 0;
@@ -111,6 +118,7 @@ export function useStudentDashboard() {
           certificateEligible: !hasPendingRec,
           unreadNotifications: notifs?.length ?? 0,
           enrollments: enrollments ?? [],
+          registration,
         });
 
         setUpcomingLessons(

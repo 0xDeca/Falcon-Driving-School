@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,8 @@ import {
   AlertCircle,
   Loader2,
   BookOpen,
+  FileText,
+  ChevronRight,
 } from "lucide-react";
 import { formatDate, formatTime, formatCurrency } from "@/lib/utils";
 import { PROGRESS_METRICS } from "@/types";
@@ -26,8 +29,14 @@ import { useUser } from "@/hooks/use-user";
 import { useStudentDashboard } from "@/hooks/use-student-data";
 
 export default function StudentDashboard() {
+  const router = useRouter();
   const { user, profile, loading: userLoading } = useUser();
   const { stats, upcomingLessons, loading, error } = useStudentDashboard();
+  useEffect(() => {
+    if (!loading && stats && !stats.registration) {
+      router.push("/student/registration");
+    }
+  }, [loading, stats, router]);
 
   if (loading || userLoading) {
     return (
@@ -155,6 +164,64 @@ export default function StudentDashboard() {
               <Link href="/student/payments">
                 <Button variant="outline" className="w-full mt-3">Make Payment</Button>
               </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="h-5 w-5 text-accent" />
+                Registration Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {stats?.registration ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-400">Name</p>
+                      <p className="font-medium text-primary">{stats.registration.surname} {stats.registration.other_names}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Phone</p>
+                      <p className="font-medium text-primary">{stats.registration.phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">NIN</p>
+                      <p className="font-medium text-primary">{stats.registration.nin}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">State of Origin</p>
+                      <p className="font-medium text-primary">{stats.registration.state_origin}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Blood Group</p>
+                      <p className="font-medium text-primary">{stats.registration.blood_group}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Lesson Time</p>
+                      <p className="font-medium text-primary">{stats.registration.preferred_lesson_time}</p>
+                    </div>
+                  </div>
+                  <Link href="/student/registration">
+                    <Button variant="outline" size="sm" className="w-full mt-2">
+                      Update Registration <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 mb-3">
+                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <p className="text-sm text-amber-700">Complete your registration to finalize enrollment</p>
+                  </div>
+                  <Link href="/student/registration">
+                    <Button variant="gold" className="w-full">
+                      Complete Registration <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
 

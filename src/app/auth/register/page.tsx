@@ -109,15 +109,18 @@ export default function RegisterPage() {
         }
       }
 
-      toast.success(
-        data.user?.identities?.length === 0
-          ? "An account with this email already exists. Try logging in instead."
-          : "Registration successful! Please check your email to verify your account."
-      );
       if (data.user?.identities?.length === 0) {
+        toast.success("An account with this email already exists. Try logging in instead.");
         router.push("/auth/login");
       } else {
-        router.push("/auth/login");
+        const { data: session } = await supabase.auth.getSession();
+        if (session?.session) {
+          toast.success("Registration successful! Please complete your registration form.");
+          router.push("/student/registration");
+        } else {
+          toast.success("Registration successful! Please check your email to verify your account, then complete your registration.");
+          router.push("/auth/login");
+        }
       }
     } catch (error: unknown) {
       const err = error as { message?: string };

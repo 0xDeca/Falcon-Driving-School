@@ -32,6 +32,7 @@ interface SidebarProps {
 const NAV_ITEMS = {
   student: [
     { label: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
+    { label: "Registration", href: "/student/registration", icon: FileText },
     { label: "Profile", href: "/student/profile", icon: User },
     { label: "Driving License", href: "/student/driving-license", icon: FileText },
     { label: "Lessons", href: "/student/lessons", icon: Calendar },
