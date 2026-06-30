@@ -22,12 +22,26 @@ export async function POST(request: Request) {
 
   const { data: existingUser } = await serviceClient
     .from("users")
-    .select("id")
+    .select("id, email, name, role")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (!existingUser) {
-    return NextResponse.json({ error: "User record not found" }, { status: 500 });
+    const { data: authUser } = await serviceClient.auth.admin.getUserById(userId);
+    if (!authUser?.user) {
+      return NextResponse.json({ error: "Auth user not found" }, { status: 500 });
+    }
+    const { error: insertError } = await serviceClient
+      .from("users")
+      .insert({
+        id: userId,
+        email: authUser.user.email,
+        name: authUser.user.user_metadata?.full_name || null,
+        role: "student",
+      });
+    if (insertError) {
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
+    }
   }
 
   const { data: dupPhone } = await serviceClient

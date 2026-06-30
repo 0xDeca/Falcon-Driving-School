@@ -72,7 +72,22 @@ export default function RegisterPage() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const msg = error.message?.toLowerCase() || "";
+        if (msg.includes("rate limit") || msg.includes("email rate")) {
+          throw new Error("Too many attempts. Please wait a few minutes and try again.");
+        }
+        if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("duplicate")) {
+          throw new Error("An account with this email already exists. Try logging in instead.");
+        }
+        if (msg.includes("weak password") || msg.includes("not strong enough")) {
+          throw new Error("Password is too weak. Use a mix of uppercase, lowercase, numbers, and special characters.");
+        }
+        if (msg.includes("invalid email") || msg.includes("not a valid email")) {
+          throw new Error("Please enter a valid email address.");
+        }
+        throw new Error("Registration failed. Please try again.");
+      }
 
       if (data.user) {
         const res = await fetch("/api/auth/complete-signup", {
@@ -83,17 +98,30 @@ export default function RegisterPage() {
 
         if (!res.ok) {
           const err = await res.json();
-          throw new Error(err.error || "Failed to complete registration");
+          const emsg = err.error?.toLowerCase() || "";
+          if (emsg.includes("phone number already registered") || emsg.includes("duplicate")) {
+            throw new Error("This phone number is already in use. Try a different one.");
+          }
+          if (emsg.includes("user record not found") || emsg.includes("auth user not found")) {
+            throw new Error("Something went wrong. Please try signing up again.");
+          }
+          throw new Error(err.error || "Registration failed. Please try again.");
         }
       }
 
       toast.success(
-        "Registration successful! Please check your email to verify your account."
+        data.user?.identities?.length === 0
+          ? "An account with this email already exists. Try logging in instead."
+          : "Registration successful! Please check your email to verify your account."
       );
-      router.push("/auth/login");
+      if (data.user?.identities?.length === 0) {
+        router.push("/auth/login");
+      } else {
+        router.push("/auth/login");
+      }
     } catch (error: unknown) {
       const err = error as { message?: string };
-      setErrors({ form: err.message || "Registration failed" });
+      setErrors({ form: err.message || "Something went wrong. Please try again." });
     } finally {
       setLoading(false);
     }
