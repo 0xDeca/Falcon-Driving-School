@@ -28,6 +28,11 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
+
+# backend build output
+backend/dist/
+backend/node_modules/
 
 # typescript
 *.tsbuildinfo

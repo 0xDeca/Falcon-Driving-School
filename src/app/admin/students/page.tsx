@@ -9,13 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Sidebar } from "@/components/layout/sidebar";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Search, UserPlus, Download, Save, X, Ban, CheckCircle, Trash2, Loader2, BookOpen } from "lucide-react";
-import { useAdminStudents, useAdminCourses } from "@/hooks/use-admin-data";
+import { useAdminStudents, useAdminCourses, useAdminInstructors } from "@/hooks/use-admin-data";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 
 export default function AdminStudents() {
   const { students, loading, refetch } = useAdminStudents();
   const { courses } = useAdminCourses();
+  const { instructors } = useAdminInstructors();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -23,7 +24,7 @@ export default function AdminStudents() {
   const [deleting, setDeleting] = useState(false);
   const [addForm, setAddForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [editForm, setEditForm] = useState<any>({});
-  const [assigning, setAssigning] = useState<{ studentId: string; courseId: string; paid: boolean } | null>(null);
+  const [assigning, setAssigning] = useState<{ studentId: string; courseId: string; instructorId: string; paid: boolean } | null>(null);
 
   const filtered = students.filter((s: any) =>
     (s.users?.email ?? "").toLowerCase().includes(search.toLowerCase()) ||
@@ -93,7 +94,8 @@ export default function AdminStudents() {
     if (!assigning) return;
     try {
       const { error } = await supabase.from("enrollments").upsert({
-        student_id: studentId, course_id: assigning.courseId, paid: assigning.paid,
+        student_id: studentId, course_id: assigning.courseId,
+        instructor_id: assigning.instructorId || null, paid: assigning.paid,
       }, { onConflict: "student_id,course_id" });
       if (error) throw error;
       toast.success("Course assigned");
@@ -108,13 +110,20 @@ export default function AdminStudents() {
     if (!deleteConfirm) return;
     setDeleting(true);
     try {
-      const { error: authError } = await supabase.auth.admin.deleteUser(deleteConfirm.userId);
-      if (authError) throw authError;
+      const res = await fetch("/api/admin/delete-user", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: deleteConfirm.userId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       toast.success("Student deleted permanently");
       setDeleteConfirm(null);
       refetch();
-    } catch { toast.error("Failed to delete student"); }
-    finally { setDeleting(false); }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete student");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -258,7 +267,7 @@ export default function AdminStudents() {
                               <div className="flex items-center gap-2">
                                 <span className="text-gray-600">{s.enrollments?.[0]?.courses?.name ?? "—"}</span>
                                 <Button variant="ghost" size="sm" className="h-6 text-xs"
-                                  onClick={() => setAssigning({ studentId: s.id, courseId: s.enrollments?.[0]?.course_id ?? "", paid: s.enrollments?.[0]?.paid ?? false })}>
+                                    onClick={() => setAssigning({ studentId: s.id, courseId: s.enrollments?.[0]?.course_id ?? "", instructorId: s.enrollments?.[0]?.instructor_id ?? "", paid: s.enrollments?.[0]?.paid ?? false })}>
                                   <BookOpen className="h-3 w-3 mr-1" /> Assign
                                 </Button>
                               </div>
@@ -330,6 +339,19 @@ export default function AdminStudents() {
                   <option value="">Select a course...</option>
                   {courses.filter((c: any) => !c.archived).map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name} — ₦{Number(c.price).toLocaleString()}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Instructor (optional)</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={assigning.instructorId}
+                  onChange={(e) => setAssigning({ ...assigning, instructorId: e.target.value })}
+                >
+                  <option value="">No instructor assigned</option>
+                  {instructors.filter((i: any) => !i.users?.suspended).map((i: any) => (
+                    <option key={i.id} value={i.id}>{i.users?.name ?? i.users?.email}</option>
                   ))}
                 </select>
               </div>

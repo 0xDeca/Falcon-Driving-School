@@ -1,0 +1,387 @@
+// ============================================================
+// Falcon Driving School — Prisma Schema
+// Self-hosted PostgreSQL 17 — Mirrors all existing Supabase tables
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ───────────────────────────────────────────────────
+enum UserRole {
+  admin
+  instructor
+  student
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  name      String?
+  role      UserRole @default(student)
+  password  String   // Argon2-hashed
+  suspended Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  instructor      Instructor?
+  student         Student?
+  notifications   Notification[]
+  otpCodes        OtpCode[]
+  sentMessages    ContactMessage[] @relation("SentMessages")
+  blogPosts       BlogPost[]
+
+  @@map("users")
+}
+
+// ─── Instructors ─────────────────────────────────────────────
+model Instructor {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @unique @map("user_id") @db.Uuid
+  certification    String?
+  yearsExperience  Int      @default(0) @map("years_experience")
+  bio              String?
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessons          Lesson[]
+  evaluations      LessonEvaluation[] @relation("InstructorEvaluations")
+  enrollments      Enrollment[]
+  courseAssignments InstructorCourse[]
+  recommendations  CertificateRecommendation[]
+
+  @@map("instructors")
+}
+
+// ─── Students ────────────────────────────────────────────────
+model Student {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @unique @map("user_id") @db.Uuid
+  phone            String?
+  address          String?
+  profilePhotoUrl  String?  @map("profile_photo_url")
+  enrollmentDate   DateTime? @map("enrollment_date") @db.Date
+
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments      Enrollment[]
+  payments         Payment[]
+  certificates     Certificate[]
+  recommendations  CertificateRecommendation[]
+  registrations    StudentRegistration[]
+  licenses         DrivingLicense[]
+
+  @@map("students")
+}
+
+// ─── Courses ─────────────────────────────────────────────────
+model Course {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  description     String?
+  durationHours   Int      @map("duration_hours")
+  price           Decimal  @db.Decimal(10, 2)
+  requirements    String?
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  enrollments         Enrollment[]
+  instructorCourses   InstructorCourse[]
+  certificates        Certificate[]
+
+  @@map("courses")
+}
+
+// ─── Enrollments ─────────────────────────────────────────────
+model Enrollment {
+  id              String   @id @default(uuid()) @db.Uuid
+  studentId       String   @map("student_id") @db.Uuid
+  courseId        String   @map("course_id") @db.Uuid
+  instructorId    String?  @map("instructor_id") @db.Uuid
+  enrollmentDate  DateTime? @map("enrollment_date") @db.Date
+  status          String   @default("active") // active | completed | cancelled
+  paid            Boolean  @default(false)
+
+  student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course      Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  instructor  Instructor? @relation(fields: [instructorId], references: [id], onDelete: SetNull)
+  lessons     Lesson[]
+
+  @@unique([studentId, courseId])
+  @@map("enrollments")
+}
+
+// ─── Lessons ─────────────────────────────────────────────────
+model Lesson {
+  id                String    @id @default(uuid()) @db.Uuid
+  enrollmentId      String    @map("enrollment_id") @db.Uuid
+  instructorId      String    @map("instructor_id") @db.Uuid
+  vehicleId         String?   @map("vehicle_id") @db.Uuid
+  scheduledDate     DateTime  @map("scheduled_date")
+  durationMinutes   Int       @map("duration_minutes")
+  attendanceStatus  String?   @map("attendance_status") // scheduled | present | absent | cancelled
+  startTime         DateTime? @map("start_time")
+  endTime           DateTime? @map("end_time")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  enrollment   Enrollment        @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  instructor   Instructor        @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle?          @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  evaluations  LessonEvaluation[]
+
+  @@map("lessons")
+}
+
+// ─── Lesson Evaluations ──────────────────────────────────────
+model LessonEvaluation {
+  id                  String   @id @default(uuid()) @db.Uuid
+  lessonId            String   @unique @map("lesson_id") @db.Uuid
+  instructorId        String   @map("instructor_id") @db.Uuid
+  steeringScore       Int?     @map("steering_score")
+  parkingScore        Int?     @map("parking_score")
+  reverseParkingScore Int?     @map("reverse_parking_score")
+  roadAwarenessScore  Int?     @map("road_awareness_score")
+  confidenceScore     Int?     @map("confidence_score")
+  strengths           String?  @map("strengths_text")
+  improvements        String?  @map("improvements_text")
+  comments            String?  @map("comments_text")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  instructor Instructor @relation("InstructorEvaluations", fields: [instructorId], references: [id])
+
+  @@map("lesson_evaluations")
+}
+
+// ─── Vehicles ────────────────────────────────────────────────
+model Vehicle {
+  id                  String   @id @default(uuid()) @db.Uuid
+  name                String
+  model               String?
+  plateNumber         String   @unique @map("plate_number")
+  transmissionType    String?  @map("transmission_type") // automatic | manual
+  insuranceExpiry     DateTime? @map("insurance_expiry") @db.Date
+  maintenanceSchedule String?  @map("maintenance_schedule")
+  status              String   @default("available") // available | maintenance | retired
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  lessons Lesson[]
+
+  @@map("vehicles")
+}
+
+// ─── Payments ────────────────────────────────────────────────
+model Payment {
+  id              String   @id @default(uuid()) @db.Uuid
+  studentId       String   @map("student_id") @db.Uuid
+  amount          Decimal  @db.Decimal(10, 2)
+  paymentMethod   String?  @map("payment_method")
+  status          String   @default("pending") // pending | completed | failed | refunded
+  reference       String?  @unique
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+// ─── Certificates ────────────────────────────────────────────
+model Certificate {
+  id            String   @id @default(uuid()) @db.Uuid
+  studentId     String   @map("student_id") @db.Uuid
+  courseId      String?  @map("course_id") @db.Uuid
+  issueDate     DateTime @default(now()) @map("issue_date") @db.Date
+  certificateNumber String? @unique @map("certificate_number")
+  status        String   @default("pending") // pending | approved | rejected
+  adminNotes    String?  @map("admin_notes")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@map("certificates")
+}
+
+// ─── Certificate Recommendations ─────────────────────────────
+model CertificateRecommendation {
+  id            String   @id @default(uuid()) @db.Uuid
+  studentId     String   @map("student_id") @db.Uuid
+  instructorId  String   @map("instructor_id") @db.Uuid
+  status        String   @default("pending") // pending | approved | rejected
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  instructor Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+
+  @@map("certificate_recommendations")
+}
+
+// ─── Instructor Courses ──────────────────────────────────────
+model InstructorCourse {
+  id             String   @id @default(uuid()) @db.Uuid
+  instructorId   String   @map("instructor_id") @db.Uuid
+  courseId       String   @map("course_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  instructor Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([instructorId, courseId])
+  @@map("instructor_courses")
+}
+
+// ─── Student Registrations ──────────────────────────────────
+model StudentRegistration {
+  id                  String   @id @default(uuid()) @db.Uuid
+  studentId           String   @unique @map("student_id") @db.Uuid
+  surname             String
+  otherNames          String   @map("other_names")
+  nin                 String
+  lgaOfOrigin         String   @map("lga_of_origin")
+  dateOfBirth         DateTime @map("date_of_birth") @db.Date
+  stateOrigin         String   @map("state_origin")
+  address             String
+  bloodGroup          String   @map("blood_group")
+  motherMaidenName    String   @map("mother_maiden_name")
+  nextOfKin           String   @map("next_of_kin")
+  nextOfKinPhone      String   @map("next_of_kin_phone")
+  phone               String
+  drivenBefore        Boolean  @default(false) @map("driven_before")
+  experiencedDriver   Boolean? @map("experienced_driver")
+  lastDrove           String?  @map("last_drove")
+  requireLicense      Boolean  @default(true) @map("require_license")
+  preferredLessonTime String   @map("preferred_lesson_time")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_registrations")
+}
+
+// ─── Driving Licenses ────────────────────────────────────────
+model DrivingLicense {
+  id          String   @id @default(uuid()) @db.Uuid
+  studentId   String   @map("student_id") @db.Uuid
+  imageUrl    String   @map("image_url")
+  status      String   @default("pending") // pending | verified | rejected
+  adminNotes  String?  @map("admin_notes")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at")
+  verifiedAt  DateTime? @map("verified_at")
+  verifiedBy  String?  @map("verified_by") @db.Uuid
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("driving_licenses")
+}
+
+// ─── OTP Codes ───────────────────────────────────────────────
+model OtpCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String    // email | phone
+  target    String    // email address or phone number
+  code      String    // 6-digit code
+  attempts  Int       @default(0)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId, type])
+  @@map("otp_codes")
+}
+
+// ─── Notifications ───────────────────────────────────────────
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ─── Contact Messages ────────────────────────────────────────
+model ContactMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  email     String
+  phone     String?
+  message   String
+  userId    String?  @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  sender User? @relation("SentMessages", fields: [userId], references: [id])
+
+  @@map("contact_messages")
+}
+
+// ─── Blog ────────────────────────────────────────────────────
+model BlogCategory {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  posts BlogPost[]
+
+  @@map("blog_categories")
+}
+
+model BlogPost {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  slug        String   @unique
+  content     String
+  excerpt     String?
+  imageUrl    String?  @map("image_url")
+  categoryId  String?  @map("category_id") @db.Uuid
+  authorId    String?  @map("author_id") @db.Uuid
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  category BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  author   User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@map("blog_posts")
+}
+
+// ─── Settings ────────────────────────────────────────────────
+model Setting {
+  id    String @id @default(uuid()) @db.Uuid
+  key   String @unique
+  value String @db.Text
+
+  @@map("settings")
+}
+
+// ─── Coupons ─────────────────────────────────────────────────
+model Coupon {
+  id             String    @id @default(uuid()) @db.Uuid
+  code           String    @unique
+  description    String?
+  discountType   String    // percentage | fixed
+  discountValue  Decimal   @db.Decimal(10, 2)
+  courseId       String?   @map("course_id") @db.Uuid
+  maxUses        Int?      @map("max_uses")
+  currentUses    Int       @default(0) @map("current_uses")
+  minAmount      Decimal?  @map("min_amount") @db.Decimal(10, 2)
+  expiresAt      DateTime? @map("expires_at")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@map("coupons")
+}

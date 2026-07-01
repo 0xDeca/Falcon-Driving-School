@@ -8,18 +8,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Search, UserPlus, Save, X, Star, Trash2, Loader2, Ban, CheckCircle } from "lucide-react";
-import { useAdminInstructors } from "@/hooks/use-admin-data";
+import { Search, UserPlus, Save, X, Star, Trash2, Loader2, Ban, CheckCircle, BookOpen } from "lucide-react";
+import { useAdminInstructors, useAdminCourses } from "@/hooks/use-admin-data";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 
 export default function AdminInstructors() {
   const { instructors, loading, refetch } = useAdminInstructors();
+  const { courses } = useAdminCourses();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [addForm, setAddForm] = useState({ name: "", email: "", password: "", certification: "", experience: "", bio: "" });
   const [editForm, setEditForm] = useState<any>({});
+  const [deleting, setDeleting] = useState(false);
 
   const filtered = instructors.filter((i: any) =>
     (i.users?.email ?? "").toLowerCase().includes(search.toLowerCase()) ||
@@ -89,12 +91,38 @@ export default function AdminInstructors() {
 
   const deleteInstructor = async (instructorId: string, userId: string) => {
     if (!confirm("Delete this instructor permanently? This action cannot be undone.")) return;
+    setDeleting(true);
     try {
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      if (authError) throw authError;
+      const res = await fetch("/api/admin/delete-user", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       toast.success("Instructor deleted permanently");
       refetch();
-    } catch { toast.error("Failed to delete instructor"); }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete instructor");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const [courseMgr, setCourseMgr] = useState<{ instructorId: string; courses: string[]; loading: boolean } | null>(null);
+  const openCourseMgr = async (instructorId: string) => {
+    const { data } = await supabase.from("instructor_courses").select("course_id").eq("instructor_id", instructorId);
+    setCourseMgr({ instructorId, courses: (data ?? []).map((r: any) => r.course_id), loading: false });
+  };
+  const toggleCourse = async (courseId: string) => {
+    if (!courseMgr) return;
+    const exists = courseMgr.courses.includes(courseId);
+    if (exists) {
+      await supabase.from("instructor_courses").delete().eq("instructor_id", courseMgr.instructorId).eq("course_id", courseId);
+      setCourseMgr({ ...courseMgr, courses: courseMgr.courses.filter((c) => c !== courseId) });
+    } else {
+      await supabase.from("instructor_courses").insert({ instructor_id: courseMgr.instructorId, course_id: courseId });
+      setCourseMgr({ ...courseMgr, courses: [...courseMgr.courses, courseId] });
+    }
   };
 
   if (loading) {
@@ -225,6 +253,15 @@ export default function AdminInstructors() {
                                 <Badge variant="destructive" className="text-xs">Suspended</Badge>
                               )}
                             </div>
+                            {inst.instructor_courses && inst.instructor_courses.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {inst.instructor_courses.map((ic: any) => (
+                                  <Badge key={ic.course_id} variant="outline" className="text-xs bg-accent/5">
+                                    {ic.courses?.name || "Course"}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -244,6 +281,9 @@ export default function AdminInstructors() {
                               : <Ban className="mr-1 h-3 w-3 text-red-500" />}
                             {inst.users?.suspended ? "Restore" : "Suspend"}
                           </Button>
+                          <Button variant="outline" size="sm" onClick={() => openCourseMgr(inst.id)}>
+                            <BookOpen className="mr-1 h-3 w-3 text-blue-600" /> Courses
+                          </Button>
                           <Button variant="outline" size="sm" onClick={() => deleteInstructor(inst.id, inst.user_id)}>
                             <Trash2 className="mr-1 h-3 w-3 text-red-500" /> Delete
                           </Button>
@@ -257,6 +297,40 @@ export default function AdminInstructors() {
           </div>
         </div>
       </div>
+
+      {courseMgr && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setCourseMgr(null)} />
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <button onClick={() => setCourseMgr(null)} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600">
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="text-lg font-semibold text-primary mb-4">Manage Courses</h3>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {courses.filter((c: any) => !c.archived).map((c: any) => {
+                const assigned = courseMgr.courses.includes(c.id);
+                return (
+                  <label key={c.id} className={`flex items-center justify-between p-3 rounded-lg cursor-pointer ${assigned ? "bg-accent/10 border border-accent/30" : "bg-gray-50"}`}>
+                    <div>
+                      <p className="font-medium text-sm text-primary">{c.name}</p>
+                      <p className="text-xs text-gray-500">₦{Number(c.price).toLocaleString()}</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 rounded border-gray-300 text-accent"
+                      checked={assigned}
+                      onChange={() => toggleCourse(c.id)}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+            <div className="mt-4">
+              <Button variant="gold" className="w-full" onClick={() => setCourseMgr(null)}>Done</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

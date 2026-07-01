@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS instructors (
   certification TEXT,
   years_experience INTEGER DEFAULT 0,
   bio TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id)
 );
 
@@ -54,11 +55,27 @@ CREATE TABLE IF NOT EXISTS enrollments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  instructor_id UUID REFERENCES instructors(id) ON DELETE SET NULL,
   enrollment_date DATE DEFAULT CURRENT_DATE,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
-  paid BOOLEAN DEFAULT false,
+  paid BOOLEAN DEFAULT FALSE,
   UNIQUE(student_id, course_id)
 );
+
+-- Instructor course assignments (which courses each instructor is qualified to teach)
+CREATE TABLE IF NOT EXISTS instructor_courses (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  instructor_id UUID NOT NULL REFERENCES instructors(id) ON DELETE CASCADE,
+  course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(instructor_id, course_id)
+);
+
+ALTER TABLE instructor_courses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins can manage instructor courses" ON instructor_courses
+  FOR ALL USING (public.is_admin());
+CREATE POLICY "Instructors can view own courses" ON instructor_courses
+  FOR SELECT USING (instructor_id IN (SELECT id FROM instructors WHERE user_id = auth.uid()));
 
 -- Vehicles
 CREATE TABLE IF NOT EXISTS vehicles (

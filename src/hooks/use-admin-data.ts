@@ -93,7 +93,7 @@ export function useAdminInstructors() {
     setLoading(true);
     const { data } = await supabase
       .from("instructors")
-      .select("*, users(*)")
+      .select("*, users(*), instructor_courses(course_id, courses(*))")
       .order("created_at", { ascending: false });
     setInstructors(data ?? []);
     setLoading(false);
