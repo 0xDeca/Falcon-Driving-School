@@ -18,7 +18,7 @@ export default function AdminReports() {
       const [paymentsRes, studentsRes, lessonsRes] = await Promise.all([
         supabase.from("payments").select("amount, created_at, status").eq("status", "completed"),
         supabase.from("students").select("created_at"),
-        supabase.from("lessons").select("id", { count: "exact" }),
+        supabase.from("lessons").select("id"),
       ]);
 
       const payments = paymentsRes.data ?? [];

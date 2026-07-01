@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import toast from "react-hot-toast";
 
 export default function ResetPasswordPage() {
@@ -26,8 +26,7 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      await api.post("/auth/reset-password", { password });
 
       toast.success("Password updated successfully!");
       router.push("/auth/login");

@@ -1,75 +1,28 @@
 import { NextResponse } from "next/server";
-import { getServiceSupabase } from "@/lib/supabase-server";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
 export async function POST(request: Request) {
   try {
-    const { recommendationId, adminComment } = await request.json();
+    const body = await request.json();
+    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
 
-    const supabase = getServiceSupabase();
+    const res = await fetch(`${API_URL}/certificates/approve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
 
-    const { data: rec, error: recError } = await supabase
-      .from("certificate_recommendations")
-      .select("*, students!inner(*)")
-      .eq("id", recommendationId)
-      .single();
-
-    if (recError || !rec) {
-      return NextResponse.json({ error: "Recommendation not found" }, { status: 404 });
+    const json = await res.json();
+    if (!res.ok) {
+      return NextResponse.json({ error: json.message || "Failed to approve certificate" }, { status: res.status });
     }
-
-    const { error: updateError } = await supabase
-      .from("certificate_recommendations")
-      .update({ 
-        status: "approved",
-        remarks: adminComment || rec.remarks
-      })
-      .eq("id", recommendationId);
-
-    if (updateError) throw updateError;
-
-    const { data: enrollment } = await supabase
-      .from("enrollments")
-      .select("course_id")
-      .eq("student_id", rec.student_id)
-      .order("enrollment_date", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const courseId = enrollment?.course_id;
-
-    const certNumber = `FDS-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-    const { error: certError } = await supabase
-      .from("certificates")
-      .insert([{
-        student_id: rec.student_id,
-        course_id: courseId,
-        certificate_number: certNumber,
-        completion_date: new Date().toISOString().split("T")[0],
-      }]);
-
-    if (certError) throw certError;
-
-    const { data: student } = await supabase
-      .from("students")
-      .select("user_id")
-      .eq("id", rec.student_id)
-      .single();
-
-    if (student) {
-      await supabase.from("notifications").insert([{
-        user_id: student.user_id,
-        type: "certificate",
-        message: "Your certificate has been approved! You can now download it from your portal.",
-      }]);
-    }
-
-    return NextResponse.json({ success: true, certificateNumber: certNumber });
+    return NextResponse.json(json);
   } catch (error) {
-    console.error("Certificate approval error:", error);
-    return NextResponse.json(
-      { error: "Failed to approve certificate" },
-      { status: 500 }
-    );
+    console.error("Certificate approval proxy error:", error);
+    return NextResponse.json({ error: "Failed to approve certificate" }, { status: 500 });
   }
 }

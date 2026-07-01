@@ -1,101 +1,95 @@
-import { supabase } from "./supabase";
+import { api } from "./api-client";
 import type { Role } from "@/types";
 
 export async function getCurrentUser() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+  try {
+    return await api.getProfile();
+  } catch {
+    return null;
+  }
 }
 
 export async function getUserRole(): Promise<Role | null> {
-  const user = await getCurrentUser();
-  if (!user) return null;
-  const { data } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  return data?.role ?? null;
+  try {
+    const user = await api.getProfile();
+    return user?.role ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getStudentProfile(userId: string) {
-  const { data } = await supabase
-    .from("students")
-    .select("*, users(*)")
-    .eq("user_id", userId)
-    .single();
-  return data;
+  try {
+    return await api.get(`/students/by-user/${userId}`);
+  } catch {
+    return null;
+  }
 }
 
 export async function getInstructorProfile(userId: string) {
-  const { data } = await supabase
-    .from("instructors")
-    .select("*, users(*)")
-    .eq("user_id", userId)
-    .single();
-  return data;
+  try {
+    return await api.get(`/instructors/by-user/${userId}`);
+  } catch {
+    return null;
+  }
 }
 
 export async function getEnrollments(studentId: string) {
-  const { data } = await supabase
-    .from("enrollments")
-    .select("*, courses(*)")
-    .eq("student_id", studentId);
-  return data ?? [];
+  try {
+    return await api.get("/enrollments", { params: { studentId } }) ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getUpcomingLessons(studentId: string) {
-  const { data } = await supabase
-    .from("lessons")
-    .select("*, enrollments!inner(*), instructors!inner(*, users(*))")
-    .eq("enrollments.student_id", studentId)
-    .gte("scheduled_date", new Date().toISOString())
-    .order("scheduled_date", { ascending: true })
-    .limit(10);
-  return data ?? [];
+  try {
+    return await api.get("/lessons", {
+      params: { studentId, upcoming: true, limit: 10, sortBy: "scheduled_date", sortOrder: "asc" },
+    }) ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getLessonHistory(studentId: string) {
-  const { data } = await supabase
-    .from("lessons")
-    .select("*, lesson_evaluations(*), instructors!inner(*, users(*))")
-    .eq("enrollments.student_id", studentId)
-    .order("scheduled_date", { ascending: false });
-  return data ?? [];
+  try {
+    return await api.get("/lessons", {
+      params: { studentId, sortBy: "scheduled_date", sortOrder: "desc" },
+    }) ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getNotifications(userId: string) {
-  const { data } = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  return data ?? [];
+  try {
+    return await api.getNotifications({ userId, limit: 50 }) ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getPayments(studentId: string) {
-  const { data } = await supabase
-    .from("payments")
-    .select("*")
-    .eq("student_id", studentId)
-    .order("created_at", { ascending: false });
-  return data ?? [];
+  try {
+    return await api.get("/payments", { params: { studentId, sortBy: "created_at", sortOrder: "desc" } }) ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getCertificates(studentId: string) {
-  const { data } = await supabase
-    .from("certificates")
-    .select("*, courses(*)")
-    .eq("student_id", studentId);
-  return data ?? [];
+  try {
+    return await api.get("/certificates", { params: { studentId } }) ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getCertificateRecommendations(studentId: string) {
-  const { data } = await supabase
-    .from("certificate_recommendations")
-    .select("*, instructors!inner(*, users(*))")
-    .eq("student_id", studentId);
-  return data ?? [];
+  try {
+    return await api.get("/certificate-recommendations", { params: { studentId } }) ?? [];
+  } catch {
+    return [];
+  }
 }

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, LogIn } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -23,32 +23,18 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const user = await api.login(email, password);
+      const role = user?.role;
 
-      if (error) throw error;
-
-      if (data.user) {
-        const { data: roleData } = await supabase
-          .from("users")
-          .select("role")
-          .eq("id", data.user.id)
-          .single();
-
-        const role = roleData?.role;
-
-        if (role === "admin") {
-          await supabase.auth.signOut();
-          toast.error("Invalid email or password");
-          setLoading(false);
-          return;
-        }
-
-        toast.success("Login successful!");
-        window.location.href = role ? `/${role}/dashboard` : "/student/dashboard";
+      if (role === "admin") {
+        api.clearTokens();
+        toast.error("Invalid email or password");
+        setLoading(false);
+        return;
       }
+
+      toast.success("Login successful!");
+      window.location.href = role ? `/${role}/dashboard` : "/student/dashboard";
     } catch (error: unknown) {
       const err = error as { message?: string };
       toast.error(err.message || "Invalid email or password");

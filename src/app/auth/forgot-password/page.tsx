@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, ArrowLeft } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import toast from "react-hot-toast";
 
 export default function ForgotPasswordPage() {
@@ -20,11 +20,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      });
-
-      if (error) throw error;
+      await api.post("/auth/forgot-password", { email });
       setSent(true);
       toast.success("Password reset email sent!");
     } catch (error: unknown) {

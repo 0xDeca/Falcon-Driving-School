@@ -1,194 +1,80 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
-import type { CookieOptions } from "@supabase/ssr";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-const SUBDOMAINS = {
-  admin: "admin",
-  staff: "staff",
-} as const;
-
-function getSubdomain(hostname: string): string | null {
-  for (const sub of Object.values(SUBDOMAINS)) {
-    if (hostname.startsWith(`${sub}.`)) return sub;
-  }
-  return null;
-}
-
-function rewrite404(request: NextRequest): NextResponse {
-  const url = request.nextUrl.clone();
-  url.pathname = "/404";
-  return NextResponse.rewrite(url);
-}
+// Protected routes by role
+const ROLE_ROUTES: Record<string, string[]> = {
+  admin: ["/admin"],
+  instructor: ["/instructor"],
+  student: ["/student"],
+};
 
 export async function middleware(request: NextRequest) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { pathname } = request.nextUrl;
 
-  if (!supabaseUrl || !supabaseKey) {
-    return NextResponse.next({ request });
+  // Public routes
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/images") ||
+    pathname.startsWith("/auth") ||
+    pathname === "/" ||
+    pathname.startsWith("/about") ||
+    pathname.startsWith("/courses") ||
+    pathname.startsWith("/pricing") ||
+    pathname.startsWith("/instructors") ||
+    pathname.startsWith("/contact") ||
+    pathname.startsWith("/blog")
+  ) {
+    return NextResponse.next();
   }
 
-  let supabaseResponse = NextResponse.next({ request });
+  // Check for access token
+  const accessToken = request.cookies.get("accessToken")?.value ||
+    request.headers.get("Authorization")?.replace("Bearer ", "");
 
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      getAll() { return request.cookies.getAll(); },
-      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options));
-      },
-    },
-  });
-
-  let user: { id: string } | null = null;
-  try {
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
-  } catch {
-    return NextResponse.next({ request });
+  if (!accessToken) {
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  const originalPath = request.nextUrl.pathname;
-  const hostname = request.nextUrl.hostname;
-  const subdomain = getSubdomain(hostname);
+  // Determine required role from path
+  for (const [role, prefixes] of Object.entries(ROLE_ROUTES)) {
+    if (prefixes.some((p) => pathname.startsWith(p))) {
+      // Verify token with API (lightweight check)
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"}/auth/profile`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
-  // Allow API routes through
-  if (originalPath.startsWith("/api")) {
-    return NextResponse.next({ request });
-  }
+        if (!res.ok) {
+          const loginUrl = new URL("/auth/login", request.url);
+          loginUrl.searchParams.set("redirect", pathname);
+          return NextResponse.redirect(loginUrl);
+        }
 
-  // Determine effective pathname after subdomain rewriting
-  // Auth routes are excluded from rewrite so admin-login on admin subdomain doesn't loop
-  let effectivePath = originalPath;
-  let needsRewrite = false;
+        const data = await res.json();
+        const userRole = data.data?.role || data?.role;
 
-  if (!originalPath.startsWith("/auth")) {
-    if (subdomain === "admin" && !originalPath.startsWith("/admin")) {
-      effectivePath = `/admin${originalPath}`;
-      needsRewrite = true;
-    } else if (subdomain === "staff" && !originalPath.startsWith("/instructor")) {
-      effectivePath = `/instructor${originalPath}`;
-      needsRewrite = true;
+        if (userRole !== role) {
+          // Redirect to appropriate dashboard
+          const dashboardMap: Record<string, string> = {
+            admin: "/admin/dashboard",
+            instructor: "/instructor/dashboard",
+            student: "/student/dashboard",
+          };
+          return NextResponse.redirect(new URL(dashboardMap[userRole] || "/", request.url));
+        }
+      } catch {
+        return NextResponse.redirect(new URL("/auth/login", request.url));
+      }
+      break;
     }
   }
 
-  // Subdomain-based isolation
-  if (subdomain === "staff") {
-    if (originalPath.startsWith("/admin") || originalPath.startsWith("/student") || originalPath === "/auth/admin-login" || originalPath === "/auth/register") {
-      return rewrite404(request);
-    }
-  }
-
-  if (subdomain === "admin") {
-    if (originalPath.startsWith("/instructor") || originalPath.startsWith("/student") || originalPath === "/auth/register") {
-      return rewrite404(request);
-    }
-  }
-
-  // Protected routes check
-  const isProtectedRoute =
-    effectivePath.startsWith("/student") ||
-    effectivePath.startsWith("/instructor") ||
-    effectivePath.startsWith("/admin");
-
-  const isAuthRoute = effectivePath.startsWith("/auth") && !effectivePath.startsWith("/auth/admin-login");
-  const isAdminAuthRoute = effectivePath.startsWith("/auth/admin-login");
-
-  if (isProtectedRoute && !user) {
-    const url = request.nextUrl.clone();
-    if (effectivePath.startsWith("/admin")) {
-      url.pathname = "/auth/admin-login";
-    } else {
-      url.pathname = "/auth/login";
-    }
-    return NextResponse.redirect(url);
-  }
-
-  if (isAuthRoute && user) {
-    const { data: roleData } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    const role = roleData?.role;
-    if (role) {
-      const url = request.nextUrl.clone();
-      url.pathname = `/${role}/dashboard`;
-      return NextResponse.redirect(url);
-    }
-  }
-
-  if (isAdminAuthRoute && user) {
-    const { data: roleData } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    const role = roleData?.role;
-    if (role === "admin") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/admin/dashboard";
-      return NextResponse.redirect(url);
-    }
-    const url = request.nextUrl.clone();
-    url.pathname = `/${role || "student"}/dashboard`;
-    return NextResponse.redirect(url);
-  }
-
-  if (user && isProtectedRoute) {
-    const { data: roleData } = await supabase
-      .from("users")
-      .select("role, suspended")
-      .eq("id", user.id)
-      .single();
-
-    if (roleData?.suspended) {
-      await supabase.auth.signOut();
-      const url = request.nextUrl.clone();
-      url.pathname = "/auth/login";
-      return NextResponse.redirect(url);
-    }
-
-    const role = roleData?.role;
-
-    if (effectivePath.startsWith("/admin") && role !== "admin") {
-      const url = request.nextUrl.clone();
-      url.pathname = `/${role}/dashboard`;
-      return NextResponse.redirect(url);
-    }
-
-    if (effectivePath.startsWith("/instructor") && role !== "instructor") {
-      const url = request.nextUrl.clone();
-      url.pathname = `/${role}/dashboard`;
-      return NextResponse.redirect(url);
-    }
-
-    if (effectivePath.startsWith("/student") && role !== "student") {
-      const url = request.nextUrl.clone();
-      url.pathname = `/${role}/dashboard`;
-      return NextResponse.redirect(url);
-    }
-  }
-
-  // Apply subdomain rewrite if needed (after all auth checks pass)
-  if (needsRewrite) {
-    const url = request.nextUrl.clone();
-    if (subdomain === "admin") {
-      url.pathname = `/admin${originalPath}`;
-    } else if (subdomain === "staff") {
-      url.pathname = `/instructor${originalPath}`;
-    }
-    return NextResponse.rewrite(url);
-  }
-
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

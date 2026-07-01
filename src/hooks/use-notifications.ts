@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import { useUser } from "./use-user";
 
 export function useNotifications() {
@@ -13,11 +13,7 @@ export function useNotifications() {
   const fetch = useCallback(async () => {
     if (!user) return;
     try {
-      const { data } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      const data = await api.getNotifications();
       setNotifications(data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
@@ -31,14 +27,14 @@ export function useNotifications() {
   }, [user, userLoading, fetch]);
 
   const markAsRead = async (id: string) => {
-    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    await api.markNotificationRead(id);
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     );
   };
 
   const deleteNotification = async (id: string) => {
-    await supabase.from("notifications").delete().eq("id", id);
+    await api.delete(`/notifications/${id}`);
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 

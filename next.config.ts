@@ -5,11 +5,15 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**.supabase.co",
+        hostname: "images.unsplash.com",
       },
       {
         protocol: "https",
-        hostname: "images.unsplash.com",
+        hostname: "*.r2.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "falcon-api.falcondrivingschool.ng",
       },
     ],
   },

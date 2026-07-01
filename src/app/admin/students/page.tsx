@@ -96,7 +96,7 @@ export default function AdminStudents() {
       const { error } = await supabase.from("enrollments").upsert({
         student_id: studentId, course_id: assigning.courseId,
         instructor_id: assigning.instructorId || null, paid: assigning.paid,
-      }, { onConflict: "student_id,course_id" });
+      });
       if (error) throw error;
       toast.success("Course assigned");
       setAssigning(null);

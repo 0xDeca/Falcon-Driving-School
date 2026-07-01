@@ -1,19 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 
 interface AdminDashboardData {
-  totalStudents: number;
-  activeInstructors: number;
-  totalRevenue: number;
-  upcomingLessons: number;
-  pendingCertificates: number;
-  recentPayments: any[];
-  totalVehicles: number;
-  availableVehicles: number;
-  totalCourses: number;
-  pendingLicenses: number;
+  totalStudents: number; activeInstructors: number; totalRevenue: number;
+  upcomingLessons: number; pendingCertificates: number; recentPayments: any[];
+  totalVehicles: number; availableVehicles: number; totalCourses: number; pendingLicenses: number;
 }
 
 export function useAdminDashboard() {
@@ -24,36 +17,8 @@ export function useAdminDashboard() {
   useEffect(() => {
     const fetch = async () => {
       try {
-          const [studentsRes, instructorsRes, paymentsRes, lessonsRes, certsRes, vehiclesRes, coursesRes, licensesRes] = await Promise.all([
-          supabase.from("students").select("id", { count: "exact" }),
-          supabase.from("instructors").select("id", { count: "exact" }),
-          supabase.from("payments").select("*, students!inner(*, users(*))").eq("status", "completed"),
-          supabase.from("lessons").select("id", { count: "exact" }).gte("scheduled_date", new Date().toISOString()),
-          supabase.from("certificate_recommendations").select("id", { count: "exact" }).eq("status", "pending"),
-          supabase.from("vehicles").select("id, status"),
-          supabase.from("courses").select("id", { count: "exact" }),
-          supabase.from("driving_licenses").select("id", { count: "exact" }).eq("status", "pending"),
-        ]);
-
-        const revenue = (paymentsRes.data ?? []).reduce(
-          (sum: number, p: any) => sum + Number(p.amount), 0
-        );
-
-        const vehicles = (vehiclesRes.data ?? []) as any[];
-        const availableVehicles = vehicles.filter((v: any) => v.status === "available").length;
-
-        setData({
-          totalStudents: studentsRes.count ?? 0,
-          activeInstructors: instructorsRes.count ?? 0,
-          totalRevenue: revenue,
-          upcomingLessons: lessonsRes.count ?? 0,
-          pendingCertificates: certsRes.count ?? 0,
-          recentPayments: (paymentsRes.data ?? []).slice(0, 10),
-          totalVehicles: vehicles.length,
-          availableVehicles,
-          totalCourses: coursesRes.count ?? 0,
-          pendingLicenses: licensesRes.count ?? 0,
-        });
+        const dashboard = await api.getAdminDashboard();
+        setData(dashboard);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error");
       } finally {
@@ -72,11 +37,12 @@ export function useAdminStudents() {
 
   const fetch = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("students")
-      .select("*, users(*), enrollments(*, courses(*))")
-      .order("enrollment_date", { ascending: false });
-    setStudents(data ?? []);
+    try {
+      const data = await api.getStudents({ sortBy: "enrollment_date", sortOrder: "desc" });
+      setStudents(data ?? []);
+    } catch {
+      setStudents([]);
+    }
     setLoading(false);
   }, []);
 
@@ -91,11 +57,12 @@ export function useAdminInstructors() {
 
   const fetch = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("instructors")
-      .select("*, users(*), instructor_courses(course_id, courses(*))")
-      .order("created_at", { ascending: false });
-    setInstructors(data ?? []);
+    try {
+      const data = await api.getInstructors({ sortBy: "created_at", sortOrder: "desc" });
+      setInstructors(data ?? []);
+    } catch {
+      setInstructors([]);
+    }
     setLoading(false);
   }, []);
 
@@ -110,11 +77,12 @@ export function useAdminCourses() {
 
   const fetch = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("courses")
-      .select("*")
-      .order("created_at", { ascending: true });
-    setCourses(data ?? []);
+    try {
+      const data = await api.getCourses({ sortBy: "created_at", sortOrder: "asc" });
+      setCourses(data ?? []);
+    } catch {
+      setCourses([]);
+    }
     setLoading(false);
   }, []);
 
@@ -129,11 +97,12 @@ export function useAdminVehicles() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from("vehicles")
-        .select("*")
-        .order("created_at", { ascending: false });
-      setVehicles(data ?? []);
+      try {
+        const data = await api.getVehicles({ sortBy: "created_at", sortOrder: "desc" });
+        setVehicles(data ?? []);
+      } catch {
+        setVehicles([]);
+      }
       setLoading(false);
     };
     fetch();

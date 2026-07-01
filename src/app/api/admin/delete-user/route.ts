@@ -1,31 +1,24 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase, getServiceSupabase } from "@/lib/supabase-server";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createServerSupabase();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: caller } = await supabase.from("users").select("role").eq("id", user.id).single();
-    if (caller?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { userId } = await request.json();
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
+
+    const res = await fetch(`${API_URL}/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!res.ok) {
+      const json = await res.json();
+      return NextResponse.json({ error: json.message || "Failed to delete user" }, { status: res.status });
     }
-
-    const adminClient = getServiceSupabase();
-    const { error } = await adminClient.auth.admin.deleteUser(userId);
-    if (error) throw error;
-
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error("Delete user error:", err);
+    console.error("Delete user proxy error:", err);
     return NextResponse.json({ error: err.message || "Failed to delete user" }, { status: 500 });
   }
 }

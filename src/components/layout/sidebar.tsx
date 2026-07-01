@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
 
 interface SidebarProps {
@@ -75,7 +75,7 @@ export function Sidebar({ role }: SidebarProps) {
   }, [pathname]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await api.logout();
     router.push("/");
   };
 

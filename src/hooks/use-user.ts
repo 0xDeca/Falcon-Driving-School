@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { api } from "@/lib/api-client";
 import type { User, Role, Student, Instructor } from "@/types";
 
 interface UseUserReturn {
@@ -14,61 +15,71 @@ interface UseUserReturn {
 }
 
 export function useUser(): UseUserReturn {
-  const [user, setUser] = useState<User | null>(null);
+  const { user: authUser, loading: authLoading, refreshUser } = useAuth();
   const [role, setRole] = useState<Role | null>(null);
   const [profile, setProfile] = useState<Student | Instructor | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
+  const fetchProfile = useCallback(async (currentUser: User | null) => {
+    if (!currentUser) {
+      setRole(null);
+      setProfile(null);
+      setProfileLoading(false);
       setError(null);
-      
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
-      if (!authUser) {
-        setUser(null);
-        setRole(null);
+      return;
+    }
+    try {
+      setProfileLoading(true);
+      setError(null);
+      setRole(currentUser.role);
+
+      if (currentUser.role === "student") {
+        const p = await api.get<Student>("/students/me");
+        setProfile(p);
+      } else if (currentUser.role === "instructor") {
+        const p = await api.get<Instructor>("/instructors/me");
+        setProfile(p);
+      } else {
         setProfile(null);
-        return;
-      }
-
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", authUser.id)
-        .single();
-      if (userError) throw userError;
-
-      setUser(userData);
-      setRole(userData.role);
-
-      if (userData.role === "student") {
-        const { data } = await supabase
-          .from("students")
-          .select("*, users(*)")
-          .eq("user_id", authUser.id)
-          .single();
-        setProfile(data);
-      } else if (userData.role === "instructor") {
-        const { data } = await supabase
-          .from("instructors")
-          .select("*, users(*)")
-          .eq("user_id", authUser.id)
-          .single();
-        setProfile(data);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      if ((err as any)?.statusCode !== 401) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      }
     } finally {
-      setLoading(false);
+      setProfileLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, []);
 
-  return { user, role, profile, loading, error, refresh: fetchData };
+  useEffect(() => {
+    if (authLoading) return;
+    fetchProfile(authUser);
+  }, [authUser, authLoading, fetchProfile]);
+
+  const refresh = useCallback(async () => {
+    setProfileLoading(true);
+    try {
+      await refreshUser();
+    } catch {
+      setProfileLoading(false);
+      return;
+    }
+    const token = api.getAccessToken();
+    if (token) {
+      const userData = await api.getProfile();
+      await fetchProfile(userData);
+    } else {
+      await fetchProfile(null);
+    }
+  }, [refreshUser, fetchProfile]);
+
+  return {
+    user: authUser,
+    role,
+    profile,
+    loading: authLoading || profileLoading,
+    error,
+    refresh,
+  };
 }

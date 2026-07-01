@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserPlus, Check, X } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import toast from "react-hot-toast";
 
 const PASSWORD_RULES = [
@@ -61,66 +61,16 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const user = await api.register({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            full_name: formData.fullName,
-            phone: formData.phone,
-          },
-        },
+        fullName: formData.fullName,
+        phone: formData.phone,
       });
 
-      if (error) {
-        const msg = error.message?.toLowerCase() || "";
-        if (msg.includes("rate limit") || msg.includes("email rate")) {
-          throw new Error("Too many attempts. Please wait a few minutes and try again.");
-        }
-        if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("duplicate")) {
-          throw new Error("An account with this email already exists. Try logging in instead.");
-        }
-        if (msg.includes("weak password") || msg.includes("not strong enough")) {
-          throw new Error("Password is too weak. Use a mix of uppercase, lowercase, numbers, and special characters.");
-        }
-        if (msg.includes("invalid email") || msg.includes("not a valid email")) {
-          throw new Error("Please enter a valid email address.");
-        }
-        throw new Error("Registration failed. Please try again.");
-      }
-
-      if (data.user) {
-        const res = await fetch("/api/auth/complete-signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: formData.phone, userId: data.user.id }),
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          const emsg = err.error?.toLowerCase() || "";
-          if (emsg.includes("phone number already registered") || emsg.includes("duplicate")) {
-            throw new Error("This phone number is already in use. Try a different one.");
-          }
-          if (emsg.includes("user record not found") || emsg.includes("auth user not found")) {
-            throw new Error("Something went wrong. Please try signing up again.");
-          }
-          throw new Error(err.error || "Registration failed. Please try again.");
-        }
-      }
-
-      if (data.user?.identities?.length === 0) {
-        toast.success("An account with this email already exists. Try logging in instead.");
-        router.push("/auth/login");
-      } else {
-        const { data: session } = await supabase.auth.getSession();
-        if (session?.session) {
-          toast.success("Registration successful! Please complete your registration form.");
-          router.push("/student/registration");
-        } else {
-          toast.success("Registration successful! Please check your email to verify your account, then complete your registration.");
-          router.push("/auth/login");
-        }
+      if (user) {
+        toast.success("Registration successful! Please complete your registration form.");
+        router.push("/student/registration");
       }
     } catch (error: unknown) {
       const err = error as { message?: string };

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase, getServiceSupabase } from "@/lib/supabase-server";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
 const COURSES = [
   { name: "2-Week Beginners Course", description: "Vehicle control, virtual simulation, traffic rules, and basic driving maneuvers.", duration_hours: 16, price: 95000, requirements: "Must be 18 years or older." },
@@ -20,39 +21,24 @@ const VEHICLES = [
   { name: "Mercedes-Benz A-Class", model: "2024", plate_number: "FDS-005-A", transmission_type: "automatic", insurance_expiry: "2027-06-30", maintenance_schedule: "Monthly", status: "available" },
 ];
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const supabase = await createServerSupabase();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
+
+    const res = await fetch(`${API_URL}/admin/seed`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ courses: COURSES, vehicles: VEHICLES }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      return NextResponse.json({ error: json.message || "Failed to seed data" }, { status: res.status });
     }
-
-    const { data: caller } = await supabase.from("users").select("role").eq("id", user.id).single();
-    if (caller?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const admin = getServiceSupabase();
-    const results: any = { courses: 0, vehicles: 0 };
-
-    for (const course of COURSES) {
-      const { data: existing } = await admin.from("courses").select("id").eq("name", course.name).maybeSingle();
-      if (!existing) {
-        await admin.from("courses").insert({ ...course, archived: false });
-        results.courses++;
-      }
-    }
-
-    for (const vehicle of VEHICLES) {
-      const { data: existing } = await admin.from("vehicles").select("id").eq("plate_number", vehicle.plate_number).maybeSingle();
-      if (!existing) {
-        await admin.from("vehicles").insert(vehicle);
-        results.vehicles++;
-      }
-    }
-
-    return NextResponse.json({ success: true, created: results });
+    return NextResponse.json(json);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
